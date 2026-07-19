@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ $title ?? "Dr. Jin's Children Clinic Online Booking" }}</title>
+    <title>{{ $title ?? "Dr. Jn's Childer Clinic Online Booking" }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -67,7 +67,7 @@
 
 <div class="topbar">
     <div class="container d-flex justify-content-between align-items-center">
-        <strong>Dr. Jin's Children Clinic</strong>
+        <strong>Dr. Jn's Childer Clinic</strong>
 
         <div>
             <a href="{{ route('booking.create') }}" class="btn btn-light btn-sm me-2">
@@ -84,7 +84,7 @@
 @yield('content')
 
 <footer class="text-center text-muted py-4 mt-5">
-    <small>Dr. Jin's Children Clinic, Abuyog, Leyte</small>
+    <small>Dr. Jn's Childer Clinic, Abuyog, Leyte</small>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

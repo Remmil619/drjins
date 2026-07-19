@@ -164,7 +164,7 @@
 <div class="hero text-center">
     <div class="container">
         <h1 class="fw-bold">Online Appointment Booking</h1>
-        <p class="mb-0">Book an appointment for Dr. Jin's Children Clinic, Abuyog, Leyte.</p>
+        <p class="mb-0">Book an appointment for Dr. Jn's Childer Clinic, Abuyog, Leyte.</p>
     </div>
 </div>
 
