@@ -5,7 +5,7 @@
 <div class="page-header text-center">
     <div class="container">
         <h1 class="fw-bold">Book an Appointment</h1>
-        <p class="mb-0">Dr. Jin's Children Clinic, Abuyog, Leyte</p>
+        <p class="mb-0">Dr. Jn's Childer Clinic, Abuyog, Leyte</p>
     </div>
 </div>
 

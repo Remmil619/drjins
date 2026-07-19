@@ -22,7 +22,7 @@
         <div class="col-md-4">
             <div class="card clinic-card">
                 <div class="card-body text-center p-4">
-                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 90px; height: 90px; font-size: 32px;">
+                    <div class="patient-avatar rounded-circle bg-primary text-white mb-3">
                         {{ strtoupper(substr($patient->first_name, 0, 1)) }}{{ strtoupper(substr($patient->last_name, 0, 1)) }}
                     </div>
 
@@ -62,7 +62,15 @@
                         <div class="col-md-4 text-muted">Sex</div>
                         <div class="col-md-8 fw-semibold">{{ $patient->sex }}</div>
                     </div>
+                    <div class="info-row">
+                        <span>Height</span>
+                        <strong>{{ $patient->height ?? 'Not provided' }}</strong>
+                    </div>
 
+                    <div class="info-row">
+                        <span>Weight</span>
+                        <strong>{{ $patient->weight ?? 'Not provided' }}</strong>
+                    </div>
                     <div class="row mb-3">
                         <div class="col-md-4 text-muted">Address</div>
                         <div class="col-md-8 fw-semibold">{{ $patient->address ?? 'Not provided' }}</div>

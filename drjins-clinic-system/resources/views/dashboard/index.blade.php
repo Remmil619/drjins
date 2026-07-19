@@ -23,26 +23,6 @@
         </div>
     @endif
 
-    <div class="card clinic-card mb-4">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h4 class="fw-bold mb-1">Appointment Monitoring</h4>
-                    <p class="text-muted mb-0">
-                        Sync appointment requests submitted from the public booking website.
-                    </p>
-                </div>
-
-                <form action="{{ route('appointments.sync') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn btn-clinic">
-                        Sync Appointments
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <h5 class="fw-bold mb-3">Appointment Summary</h5>
 
     <div class="row g-4 mb-4">

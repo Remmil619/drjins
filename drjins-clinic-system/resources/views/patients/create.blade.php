@@ -60,6 +60,35 @@
                             <option value="Female" {{ old('sex') == 'Female' ? 'selected' : '' }}>Female</option>
                         </select>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Height</label>
+                        <input 
+                            type="text" 
+                            name="height" 
+                            class="form-control @error('height') is-invalid @enderror" 
+                            value="{{ old('height') }}"
+                            placeholder="Example: 100 cm"
+                        >
+
+                        @error('height')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Weight</label>
+                        <input 
+                            type="text" 
+                            name="weight" 
+                            class="form-control @error('weight') is-invalid @enderror" 
+                            value="{{ old('weight') }}"
+                            placeholder="Example: 20 kg"
+                        >
+
+                        @error('weight')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Status</label>

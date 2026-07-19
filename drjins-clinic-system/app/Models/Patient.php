@@ -9,14 +9,16 @@ class Patient extends Model
 {
     protected $fillable = [
         'patient_no',
+        'online_appointment_no',
         'first_name',
         'middle_name',
         'last_name',
         'birthdate',
         'sex',
+        'height',
+        'weight',
         'address',
         'guardian_name',
-        'guardian_relationship',
         'contact_number',
         'emergency_contact',
         'status',

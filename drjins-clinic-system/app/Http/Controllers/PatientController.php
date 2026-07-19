@@ -35,20 +35,24 @@ class PatientController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'birthdate' => 'required|date|before_or_equal:today',
-            'sex' => 'required|in:Male,Female',
-            'address' => 'nullable|string|max:1000',
-            'guardian_name' => 'required|string|max:255',
-            'guardian_relationship' => 'nullable|string|max:255',
-            'contact_number' => 'required|string|max:20',
-            'emergency_contact' => 'nullable|string|max:20',
-            'status' => 'required|in:Active,Inactive',
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+
+            'birthdate' => ['nullable', 'date', 'before_or_equal:today'],
+            'sex' => ['nullable', 'in:Male,Female'],
+            'height' => ['nullable', 'string', 'max:50'],
+            'weight' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string', 'max:500'],
+
+            'guardian_name' => ['nullable', 'string', 'max:255'],
+            'relationship' => ['nullable', 'string', 'max:100'],
+            'contact_number' => ['nullable', 'string', 'max:20'],
+            'emergency_contact' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $validated['patient_no'] = 'PT-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5));
+        $validated['patient_no'] = $this->generatePatientNo();
+        $validated['status'] = 'Active';
 
         Patient::create($validated);
 
@@ -60,5 +64,14 @@ class PatientController extends Controller
     public function show(Patient $patient)
     {
         return view('patients.show', compact('patient'));
+    }
+
+    private function generatePatientNo()
+    {
+        do {
+            $patientNo = 'PAT-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5));
+        } while (Patient::where('patient_no', $patientNo)->exists());
+
+        return $patientNo;
     }
 }
