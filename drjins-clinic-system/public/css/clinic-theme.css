@@ -1,0 +1,24 @@
+:root{--clinic-blue:#16858a;--clinic-blue-dark:#10686c;--clinic-navy:#173e51;--clinic-surface:#fbfdfc;--bs-primary:#16858a}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--clinic-surface);color:var(--clinic-navy)}
+.container{max-width:1200px}.utility-bar{background:#eaf5f2;padding:8px 0;font-size:12px;color:#446963}
+.clinic-navbar{background:#fff;border-bottom:1px solid #ddeae6;box-shadow:none;min-height:92px}
+.clinic-navbar .navbar-brand,.clinic-navbar .nav-link{color:#173e51}
+.clinic-navbar .nav-link:hover,.clinic-navbar .nav-link:focus,.clinic-navbar .nav-link.active{color:#16858a;background:#edf8f5}
+.clinic-brand{display:inline-flex;align-items:center;gap:10px;font-size:25px;font-weight:800;line-height:1.1}
+.clinic-brand small{display:block;font-size:9px;letter-spacing:2px;margin-top:7px}
+.brand-symbol{display:grid;place-items:center;background:#16858a;color:white;width:43px;height:46px;border-radius:15px 15px 15px 3px;font-size:39px;font-weight:400}
+.page-header{background:linear-gradient(115deg,#f1f8f4,#e7f1ed);padding:42px 0;margin-bottom:30px;color:#173e51;border-bottom:1px solid #ddeae6}
+.page-header h1{font-size:clamp(1.8rem,3vw,2.6rem);font-weight:700;letter-spacing:-.035em}
+.page-header p{color:#607781}.eyebrow{display:block;font-size:11px;font-weight:700;letter-spacing:2px;color:#16858a;margin-bottom:14px}
+.clinic-card{border:1px solid #ddeae6;border-radius:18px;box-shadow:0 8px 24px #183f5104;overflow:hidden}
+.mint-card{background:#edf8f5}.metric-value{font-size:36px;font-weight:750;line-height:1.2;color:#16858a}
+.btn{border-radius:8px;font-weight:600}.btn-primary{--bs-btn-bg:#16858a;--bs-btn-border-color:#16858a;--bs-btn-hover-bg:#10686c;--bs-btn-hover-border-color:#10686c;--bs-btn-active-bg:#10686c}
+.btn-outline-primary{--bs-btn-color:#16858a;--bs-btn-border-color:#b7ceca;--bs-btn-hover-bg:#16858a;--bs-btn-hover-border-color:#16858a}
+a{color:#16858a}.text-primary{color:#16858a!important}.bg-primary{background:#16858a!important}.form-control,.form-select{border-color:#ccded7;border-radius:9px}.form-control:focus,.form-select:focus{border-color:#16858a;box-shadow:0 0 0 3px #16858a20}
+.table th{background:#edf8f5;color:#446963;font-size:12px;letter-spacing:.04em;padding:14px}.table td{padding:16px 14px}.account-menu-button{border-color:#ddeae6}
+.skip-link{position:absolute;top:-60px;left:20px;z-index:2000;padding:10px;background:white}.skip-link:focus{top:10px}
+@media print{nav,.utility-bar,footer,form,.btn,.skip-link{display:none!important}.page-header{padding:10px 0}.clinic-card{break-inside:avoid;box-shadow:none}body{background:#fff}}
+
+.patient-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #ddeae6;padding-bottom:12px}.patient-tabs a{padding:10px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600}.patient-tabs a.active{background:#16858a;color:#fff}.profile-details{font-size:13px;margin:20px 0}.profile-details dt{color:#607781;font-weight:500}.profile-details dd{margin-bottom:16px;overflow-wrap:anywhere}.record-entry{padding:24px 0;border-bottom:1px solid #ddeae6}.record-entry:last-child{border-bottom:0}.record-entry dt{font-size:13px;color:#607781}.record-entry dd{font-size:14px;margin-bottom:14px}.record-void{background:#fff6f4;border-left:3px solid #ba655b;padding-left:12px!important}.record-form{background:#f2f8f5;padding:18px;border-radius:12px}.preserve-lines{white-space:pre-wrap;overflow-wrap:anywhere}.payment-line{padding:14px;background:#f5f9f7;margin-top:12px;border-radius:8px}.billing-patient-header{padding-top:20px;font-size:13px;font-weight:700}.operations-links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.operations-links a{padding:18px;border:1px solid #ddeae6;background:#fff;border-radius:14px;text-decoration:none}.operations-links small{display:block;margin-top:8px;color:#607781}.clinic-navbar .nav-link{font-size:13px}.clinic-navbar .container{gap:12px}button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #dcaf45;outline-offset:3px}
+@media(max-width:767px){.operations-links{grid-template-columns:repeat(2,1fr)}.patient-tabs a{padding:8px;font-size:12px}.record-entry{padding:18px 0}}
+@media print{.patient-tabs,.record-form,.correction-action,.operations-links{display:none!important}.record-entry{break-inside:avoid}.col-lg-9{width:100%}.col-lg-3{width:100%}}

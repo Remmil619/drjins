@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'Book an appointment')
 
 @section('content')
 
@@ -137,7 +138,7 @@
     @media (max-width: 991px) {
         .calendar-header-grid,
         .calendar-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
         }
 
         .time-grid {
@@ -148,7 +149,7 @@
     @media (max-width: 575px) {
         .calendar-header-grid,
         .calendar-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
         }
 
         .time-grid {
@@ -156,15 +157,21 @@
         }
 
         .calendar-empty {
-            display: none;
+            min-height: 65px;
         }
+        .calendar-grid, .calendar-header-grid { gap: 3px; }
+        .calendar-day { min-height: 65px; border-radius: 7px; padding: 6px 1px; }
+        .calendar-day .day-number { font-size: 17px; }
+        .calendar-day .day-name, .calendar-day .status-label { display: none; }
+        .calendar-day .month-label, .calendar-weekday { font-size: 10px; }
+        .calendar-wrapper { padding: 8px; }
     }
 </style>
 
 <div class="hero text-center">
     <div class="container">
         <h1 class="fw-bold">Online Appointment Booking</h1>
-        <p class="mb-0">Book an appointment for Dr. Jn's Childer Clinic, Abuyog, Leyte.</p>
+        <p class="mb-0">Plan your child's checkup at {{ config('clinic.name') }}, Abuyog, Leyte.</p>
     </div>
 </div>
 
@@ -174,11 +181,11 @@
 
             <div class="clinic-note mb-4">
                 <strong>Reminder:</strong>
-                Green dates and time slots are available. Red dates or time slots are already closed or fully booked.
+                Choose from the next 14 days. Green dates and times are available; red ones are unavailable. All times are Philippine time.
             </div>
 
             @if ($errors->any())
-                <div class="alert alert-danger">
+                <div class="alert alert-danger" id="serverBookingErrors" role="alert" tabindex="-1">
                     <strong>Please check the form.</strong>
                     <ul class="mb-0 mt-2">
                         @foreach ($errors->all() as $error)
@@ -188,30 +195,40 @@
                 </div>
             @endif
 
-            <div class="card booking-card">
+            <div class="card booking-card" id="appointment-form" tabindex="-1">
                 <div class="card-body p-4">
-                    <h4 class="fw-bold mb-3">Appointment Request Form</h4>
+                    <h4 class="fw-bold mb-2">Appointment Request Form</h4>
+                    <p class="small">Child checkup · No online payment required. Fees are confirmed by the clinic.</p>
 
-                    <form action="{{ route('booking.store') }}" method="POST">
+                    <form id="bookingForm" action="{{ route('booking.store') }}" method="POST">
                         @csrf
 
                         <input type="hidden" name="appointment_date" id="appointment_date" value="{{ old('appointment_date') }}">
                         <input type="hidden" name="appointment_time" id="appointment_time" value="{{ old('appointment_time') }}">
 
-                        <div class="mb-3">
-                            <label class="form-label">Guardian / Parent Name</label>
-                            <input type="text" name="guardian_name" class="form-control" value="{{ old('guardian_name') }}" required>
-                        </div>
+                        <p class="small text-muted mb-4">Please provide parent or guardian details separately from the child’s. No password is needed.</p>
 
-                        <div class="mb-3">
-                            <label class="form-label">Child's Name</label>
-                            <input type="text" name="child_name" class="form-control" value="{{ old('child_name') }}" required>
-                        </div>
+                        <fieldset class="mb-4"><legend class="h5 fw-bold border-bottom pb-2 mb-3">Parent or Guardian Information</legend><div class="row g-3">
+                            <div class="col-md-8"><label class="form-label" for="guardian_name">Full name</label><input type="text" id="guardian_name" name="guardian_name" class="form-control" value="{{ old('guardian_name') }}" autocomplete="name" maxlength="255" required></div>
+                            <div class="col-md-4"><label class="form-label" for="guardian_relationship">Relationship to child</label><select id="guardian_relationship" name="guardian_relationship" class="form-select" required><option value="">Choose one</option>@foreach(['Mother', 'Father', 'Legal guardian', 'Other relative', 'Other'] as $relationship)<option value="{{ $relationship }}" @selected(old('guardian_relationship') === $relationship)>{{ $relationship }}</option>@endforeach</select></div>
+                            <div class="col-md-6"><label class="form-label" for="contact_number">Mobile number</label><input type="tel" id="contact_number" name="contact_number" class="form-control" value="{{ old('contact_number') }}" placeholder="09XXXXXXXXX" pattern="(09[0-9]{9}|\+639[0-9]{9})" autocomplete="tel" required><div class="form-text">Used for appointment updates and status checks.</div></div>
+                            <div class="col-md-6"><label class="form-label" for="guardian_email">Email address <span class="text-muted">(optional)</span></label><input type="email" id="guardian_email" name="guardian_email" class="form-control" value="{{ old('guardian_email') }}" autocomplete="email" maxlength="255"></div>
+                            <div class="col-12"><label class="form-label" for="guardian_address">Home address</label><input type="text" id="guardian_address" name="guardian_address" class="form-control" value="{{ old('guardian_address') }}" autocomplete="street-address" maxlength="500" placeholder="Barangay, municipality, province" required></div>
+                        </div></fieldset>
 
-                        <div class="mb-4">
-                            <label class="form-label">Contact Number</label>
-                            <input type="text" name="contact_number" class="form-control" value="{{ old('contact_number') }}" placeholder="Example: 09XXXXXXXXXX" required>
-                        </div>
+                        <fieldset class="mb-4"><legend class="h5 fw-bold border-bottom pb-2 mb-3">Child’s Information</legend><div class="row g-3">
+                            <div class="col-md-6"><label class="form-label" for="child_name">Child’s full name</label><input type="text" id="child_name" name="child_name" class="form-control" value="{{ old('child_name') }}" maxlength="255" required></div>
+                            <div class="col-md-3"><label class="form-label" for="child_date_of_birth">Date of birth</label><input type="date" id="child_date_of_birth" name="child_date_of_birth" class="form-control" value="{{ old('child_date_of_birth') }}" max="{{ now()->toDateString() }}" required></div>
+                            <div class="col-md-3"><label class="form-label" for="child_sex">Sex</label><select id="child_sex" name="child_sex" class="form-select" required><option value="">Choose one</option>@foreach(['Female', 'Male', 'Prefer not to say'] as $sex)<option value="{{ $sex }}" @selected(old('child_sex') === $sex)>{{ $sex }}</option>@endforeach</select></div>
+                            <div class="col-md-6"><label class="form-label" for="allergies">Known allergies <span class="text-muted">(optional)</span></label><textarea id="allergies" name="allergies" class="form-control" rows="2" maxlength="2000" placeholder="List allergies, or write ‘None known’">{{ old('allergies') }}</textarea></div>
+                            <div class="col-md-6"><label class="form-label" for="current_medications">Current medicines or supplements <span class="text-muted">(optional)</span></label><textarea id="current_medications" name="current_medications" class="form-control" rows="2" maxlength="2000" placeholder="Include name and dose if known">{{ old('current_medications') }}</textarea></div>
+                            <div class="col-12"><label class="form-label" for="medical_notes">Relevant health history or notes <span class="text-muted">(optional)</span></label><textarea id="medical_notes" name="medical_notes" class="form-control" rows="3" maxlength="2000" placeholder="Briefly note important past conditions or care needs. You may bring detailed records to the visit.">{{ old('medical_notes') }}</textarea></div>
+                        </div></fieldset>
+
+                        <fieldset class="mb-4"><legend class="h5 fw-bold border-bottom pb-2 mb-3">Emergency Contact <span class="text-muted fs-6">(optional)</span></legend><div class="row g-3">
+                            <div class="col-md-6"><label class="form-label" for="emergency_contact_name">Contact person</label><input type="text" id="emergency_contact_name" name="emergency_contact_name" class="form-control" value="{{ old('emergency_contact_name') }}" maxlength="255"></div>
+                            <div class="col-md-6"><label class="form-label" for="emergency_contact_number">Mobile number</label><input type="tel" id="emergency_contact_number" name="emergency_contact_number" class="form-control" value="{{ old('emergency_contact_number') }}" placeholder="09XXXXXXXXX" pattern="(09[0-9]{9}|\+639[0-9]{9})"></div>
+                        </div></fieldset>
 
                         <div class="mb-4">
                             <label class="form-label fw-bold">Choose Available Date</label>
@@ -241,6 +258,8 @@
                                             type="button"
                                             class="calendar-day date-btn {{ $calendarDate['clickable'] ? 'available' : 'closed' }}"
                                             data-date="{{ $calendarDate['date'] }}"
+                                            aria-label="{{ $calendarDate['full_label'] }}, {{ $calendarDate['status'] }}, {{ $calendarDate['available_count'] }} available slots"
+                                            aria-pressed="false"
                                             {{ $calendarDate['clickable'] ? '' : 'disabled' }}
                                         >
                                             <div class="day-name">{{ $dateObject->format('D') }}</div>
@@ -261,7 +280,7 @@
                         <div class="mb-4">
                             <label class="form-label fw-bold">Choose Preferred Time</label>
 
-                            <div id="selectedDateText" class="text-muted mb-3">
+                            <div id="selectedDateText" class="text-muted mb-3" aria-live="polite">
                                 Please select an available date first.
                             </div>
 
@@ -269,19 +288,22 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Reason for Visit</label>
-                            <textarea name="reason_for_visit" class="form-control" rows="4" placeholder="Example: Check-up, fever, cough, follow-up consultation">{{ old('reason_for_visit') }}</textarea>
+                            <label class="form-label" for="reason_for_visit">Reason for Visit (optional)</label>
+                            <textarea id="reason_for_visit" name="reason_for_visit" class="form-control" rows="4" maxlength="1000" placeholder="Tell us what you would like to discuss during the checkup">{{ old('reason_for_visit', request('service') === 'child-checkup' ? 'Child checkup' : '') }}</textarea>
                         </div>
 
                         <div class="form-check mb-4">
-                            <input type="checkbox" name="consent" value="1" class="form-check-input" required>
-                            <label class="form-check-label">
-                                I consent to the use of this information for appointment processing only.
+                            <input type="checkbox" id="consent" name="consent" value="1" class="form-check-input" required @checked(old('consent'))>
+                            <label class="form-check-label" for="consent">
+                                I consent to the use of the details provided, including the child’s health notes, to arrange and manage this appointment. <a href="{{ route('privacy') }}">Read the privacy notice</a>.
                             </label>
                         </div>
 
-                        <button type="submit" class="btn btn-book w-100">
-                            Submit Appointment Request
+                        <div id="bookingSummary" class="booking-summary" aria-live="polite">Select a date and time to continue.</div>
+                        <div id="bookingFeedback" class="alert alert-danger" role="alert" tabindex="-1" hidden></div>
+                        <noscript><div class="alert alert-warning">Please enable JavaScript to select your appointment date and time.</div></noscript>
+                        <button type="submit" id="submitBooking" class="btn btn-book w-100">
+                            Confirm Appointment
                         </button>
                     </form>
                 </div>
@@ -301,21 +323,66 @@
     const selectedDateText = document.getElementById('selectedDateText');
     const timeSlotsContainer = document.getElementById('timeSlots');
     const dateButtons = document.querySelectorAll('.date-btn');
+    const bookingForm = document.getElementById('bookingForm');
+    const bookingFeedback = document.getElementById('bookingFeedback');
+    const submitBooking = document.getElementById('submitBooking');
+    bookingForm.noValidate = true;
+
+    function showBookingError(message) {
+        bookingFeedback.textContent = message;
+        bookingFeedback.hidden = false;
+        bookingFeedback.focus();
+    }
+
+    bookingForm.addEventListener('submit', function (event) {
+        bookingFeedback.hidden = true;
+        if (!bookingForm.checkValidity()) {
+            event.preventDefault();
+            const invalidField = bookingForm.querySelector('input:invalid, select:invalid, textarea:invalid');
+            const label = invalidField.labels?.[0]?.textContent.trim() || 'Required information';
+            showBookingError('Please check ' + label + ': ' + invalidField.validationMessage);
+            invalidField.focus();
+            bookingForm.reportValidity();
+            return;
+        }
+        const selectedDate = calendarDates.find(item => item.date === appointmentDateInput.value);
+        const selectedSlot = selectedDate?.slots.find(slot => slot.time === appointmentTimeInput.value && slot.available);
+        if (!selectedSlot) {
+            event.preventDefault();
+            showBookingError('Please select an available appointment date and time before confirming.');
+            return;
+        }
+        submitBooking.disabled = true;
+        submitBooking.textContent = 'Booking your appointment…';
+        bookingForm.setAttribute('aria-busy', 'true');
+    });
+
+    window.addEventListener('pageshow', function () {
+        submitBooking.disabled = false;
+        submitBooking.textContent = 'Confirm Appointment';
+        bookingForm.removeAttribute('aria-busy');
+    });
+    document.getElementById('serverBookingErrors')?.focus();
 
     function clearDateSelection() {
         document.querySelectorAll('.date-btn').forEach(button => {
             button.classList.remove('selected');
+            button.setAttribute('aria-pressed', 'false');
         });
     }
 
     function clearTimeSelection() {
         document.querySelectorAll('.time-btn').forEach(button => {
             button.classList.remove('selected');
+            button.setAttribute('aria-pressed', 'false');
         });
     }
 
     function showTimeSlots(dateValue) {
         const selectedDate = calendarDates.find(item => item.date === dateValue);
+        if (!selectedDate) return;
+        bookingFeedback.hidden = true;
+        document.getElementById('bookingSummary').textContent = 'Choose an available time for ' + selectedDate.full_label + '.';
 
         appointmentDateInput.value = dateValue;
         appointmentTimeInput.value = '';
@@ -325,6 +392,7 @@
         const selectedDateButton = document.querySelector('.date-btn[data-date="' + dateValue + '"]');
         if (selectedDateButton) {
             selectedDateButton.classList.add('selected');
+            selectedDateButton.setAttribute('aria-pressed', 'true');
         }
 
         selectedDateText.innerHTML = 'Selected date: <strong>' + selectedDate.full_label + '</strong>';
@@ -336,28 +404,31 @@
             button.className = 'time-chip time-btn';
             button.textContent = slot.label;
             button.dataset.time = slot.time;
+            button.setAttribute('aria-pressed', 'false');
 
             if (slot.available) {
                 button.addEventListener('click', function () {
                     appointmentTimeInput.value = slot.time;
                     clearTimeSelection();
                     button.classList.add('selected');
+                    button.setAttribute('aria-pressed', 'true');
+                    document.getElementById('submitBooking').disabled = false;
+                    document.getElementById('bookingSummary').textContent = 'Your visit: ' + selectedDate.full_label + ' at ' + slot.label + ' (Philippine time).';
                 });
             } else {
                 button.classList.add('booked');
                 button.disabled = true;
-                button.textContent = slot.label + ' - Booked';
+                button.textContent = slot.label + ' - Unavailable';
             }
 
             timeSlotsContainer.appendChild(button);
         });
 
-        if (oldTime) {
+        if (oldTime && dateValue === oldDate) {
             const oldTimeButton = document.querySelector('.time-btn[data-time="' + oldTime + '"]');
 
             if (oldTimeButton && !oldTimeButton.disabled) {
-                oldTimeButton.classList.add('selected');
-                appointmentTimeInput.value = oldTime;
+                oldTimeButton.click();
             }
         }
     }

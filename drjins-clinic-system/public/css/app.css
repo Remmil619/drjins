@@ -239,6 +239,66 @@ body {
     font-size: 32px;
 }
 
+.medical-record-list {
+    padding: 0;
+    list-style: none;
+}
+
+.medical-record-item {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: 1rem;
+}
+
+.medical-record-marker {
+    width: 12px;
+    height: 12px;
+    margin-top: 0.35rem;
+    border: 3px solid #cfe2ff;
+    border-radius: 50%;
+    background: var(--clinic-blue);
+    box-sizing: content-box;
+}
+
+.medical-record-content {
+    padding: 1rem;
+    border: 1px solid #dbe7f3;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.medical-record-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.medical-record-details dt {
+    margin-bottom: 0.25rem;
+    color: #6c757d;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.medical-record-details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.medical-record-empty {
+    padding: 2rem 1rem;
+    border: 1px dashed #b8c9da;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+@media (max-width: 767.98px) {
+    .medical-record-details {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 991.98px) {
     .clinic-navbar .navbar-collapse {
         padding-top: 1rem;
@@ -284,39 +344,86 @@ body {
     background: #f8d7da;
     color: #842029;
 }
-
-
-
-
-
-
-/** 3 dontrs functions**/
-.action-dots-btn {
-    width: 34px;
-    height: 34px;
-    border: none;
-    border-radius: 50%;
-    background: #f1f5f9;
-    color: #334155;
-    font-size: 22px;
-    line-height: 1;
-    font-weight: 700;
+.status-dropdown-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 112px;
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid currentColor;
+    box-shadow: 0 2px 8px rgba(23, 50, 77, 0.08);
     cursor: pointer;
-    transition: 0.2s ease;
+    transition:
+        box-shadow 0.2s ease,
+        transform 0.2s ease,
+        opacity 0.2s ease;
 }
 
-.action-dots-btn:hover {
-    background: #0d6efd;
+.status-dropdown-btn::after {
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.status-dropdown-btn:hover,
+.status-dropdown-btn:focus,
+.status-dropdown-btn[aria-expanded="true"] {
+    opacity: 1;
+    box-shadow: 0 5px 14px rgba(23, 50, 77, 0.16);
+    transform: translateY(-1px);
+}
+
+.status-dropdown-menu {
+    min-width: 210px;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    padding: 7px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 14px 34px rgba(23, 50, 77, 0.16);
+}
+
+.status-dropdown-menu .dropdown-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.status-dropdown-menu .dropdown-item:hover,
+.status-dropdown-menu .dropdown-item:focus {
+    color: var(--clinic-blue-dark);
+    background: #eef5ff;
+}
+
+.status-dropdown-menu .dropdown-item:active {
     color: #ffffff;
+    background: var(--clinic-blue);
+}
+
+.appointments-table-responsive {
+    /* The status menu uses fixed positioning to escape this scroll container. */
+    overflow-x: auto;
 }
 
 .patient-modal {
+    max-height: calc(100vh - 2rem);
     border: none;
     border-radius: 18px;
     overflow: hidden;
 }
 
+.patient-modal > form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .patient-modal .modal-header {
+    flex: 0 0 auto;
     background: #0d6efd;
     color: #ffffff;
     border-bottom: none;
@@ -324,10 +431,15 @@ body {
 }
 
 .patient-modal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 24px;
 }
 
 .patient-modal .modal-footer {
+    flex: 0 0 auto;
     border-top: none;
     padding: 18px 24px 24px;
 }

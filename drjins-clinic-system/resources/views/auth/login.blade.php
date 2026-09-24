@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>Staff Sign In | Dr. Jn's Childer Clinic</title>
+    <title>Staff Sign In | Dr. Jn's Children's Clinic</title>
     <link href="{{ asset('css/login.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -18,7 +18,7 @@
                     </svg>
                 </span>
                 <span>
-                    Dr. Jn's Childer Clinic
+                    Dr. Jn's Children's Clinic
                     <small>Clinic Management System</small>
                 </span>
             </div>
@@ -92,3 +92,4 @@
 </main>
 </body>
 </html>
+

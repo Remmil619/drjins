@@ -4,15 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\OnlineAppointment;
 use App\Models\Patient;
+use App\Services\BookingSync;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class OnlineBookingController extends Controller
 {
     public function index(Request $request)
     {
-        $selectedFilter = $request->input('filter', 'upcoming');
+        $selectedFilter = $request->input('filter', 'today');
+        if (!in_array($selectedFilter, ['all', 'today', 'upcoming', 'past'], true)) $selectedFilter = 'today';
 
         $this->syncBookingsFromPortal();
 
@@ -21,16 +23,16 @@ class OnlineBookingController extends Controller
 
     public function live(Request $request)
     {
-        $selectedFilter = $request->input('filter', 'upcoming');
+        $selectedFilter = $request->input('filter', 'today');
         $allowedFilters = ['all', 'today', 'upcoming', 'past'];
 
         if (! in_array($selectedFilter, $allowedFilters, true)) {
-            $selectedFilter = 'upcoming';
+            $selectedFilter = 'today';
         }
 
         $connected = $this->syncBookingsFromPortal();
 
-        $appointmentsQuery = OnlineAppointment::query();
+        $appointmentsQuery = OnlineAppointment::with('queueEntry');
 
         if ($selectedFilter === 'today') {
             $appointmentsQuery->whereDate('appointment_date', now()->toDateString());
@@ -54,6 +56,18 @@ class OnlineBookingController extends Controller
                     'appointment_time' => $appointment->appointment_time,
                     'reason_for_visit' => $appointment->reason_for_visit,
                     'status' => $appointment->status,
+                    'patient_url' => $appointment->patient_id ? route('patients.show', $appointment->patient_id) : null,
+                    'status_locked' => $appointment->status === 'Completed' || ($appointment->queueEntry !== null && in_array($appointment->queueEntry->status, ['waiting', 'in_consultation', 'completed'], true)),
+                    'guardian_relationship' => $appointment->guardian_relationship,
+                    'guardian_email' => $appointment->guardian_email,
+                    'guardian_address' => $appointment->guardian_address,
+                    'child_date_of_birth' => $appointment->child_date_of_birth,
+                    'child_sex' => $appointment->child_sex,
+                    'emergency_contact_name' => $appointment->emergency_contact_name,
+                    'emergency_contact_number' => $appointment->emergency_contact_number,
+                    'allergies' => $appointment->allergies,
+                    'current_medications' => $appointment->current_medications,
+                    'medical_notes' => $appointment->medical_notes,
                 ];
             });
 
@@ -74,112 +88,57 @@ class OnlineBookingController extends Controller
 
     public function savePatientDetails(Request $request)
     {
-        $validated = $request->validate([
-            'appointment_no' => ['required', 'string', 'max:255'],
-            'child_name' => ['required', 'string', 'max:255'],
-            'guardian_name' => ['required', 'string', 'max:255'],
-            'contact_number' => ['required', 'string', 'max:20'],
-            'birthdate' => ['required', 'date', 'before_or_equal:today'],
-            'sex' => ['required', 'in:Male,Female'],
-            'height' => ['nullable', 'string', 'max:50'],
-            'weight' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'emergency_contact' => ['nullable', 'string', 'max:20'],
-            'appointment_status' => ['nullable', 'in:done,follow_up'],
+        $validated=$request->validate([
+            'appointment_no'=>'required|string|max:255',
+            'first_name'=>'required|string|max:255','middle_name'=>'nullable|string|max:255',
+            'last_name'=>'required|string|max:255','suffix'=>'nullable|string|max:20',
+            'guardian_name'=>'required|string|max:255','contact_number'=>'required|string|max:20',
+            'birthdate'=>'required|date_format:Y-m-d|before_or_equal:today','sex'=>'required|in:Male,Female',
+            'height'=>'nullable|string|max:50','weight'=>'nullable|string|max:50',
+            'temperature'=>'nullable|numeric|between:25,45','address'=>'nullable|string|max:500',
+            'emergency_contact'=>'nullable|string|max:20','appointment_status'=>'nullable|in:register,done,follow_up',
         ]);
-
-        $appointment = OnlineAppointment::where('appointment_no', $validated['appointment_no'])->first();
-
-        if (!$appointment) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'appointment_no' => 'Appointment reference number not found.',
+        [$patient,$appointment,$action]=\Illuminate\Support\Facades\DB::transaction(function() use($validated) {
+            $appointment=OnlineAppointment::where('appointment_no',$validated['appointment_no'])->lockForUpdate()->first();
+            if (!$appointment) throw \Illuminate\Validation\ValidationException::withMessages(['appointment_no'=>'Appointment reference number not found.']);
+            $patient=$appointment->patient_id ? Patient::findOrFail($appointment->patient_id) : Patient::where('online_appointment_no',$appointment->appointment_no)->first();
+            $attributes=collect($validated)->except(['appointment_no','appointment_status'])->all();
+            if ($patient) $patient->update($attributes);
+            else $patient=Patient::create($attributes+['online_appointment_no'=>$appointment->appointment_no,'patient_no'=>$this->generatePatientNo(),'status'=>'Active']);
+            $appointment->update(['patient_id'=>$patient->id]);
+            $action=$validated['appointment_status'] ?? 'register';
+            if ($action !== 'register') {
+                $appointment->assertStatusChangeAllowed($action === 'done' ? 'Completed' : 'Rescheduled', 'appointment_status');
+                $appointment->update([
+                    'status'=>$action==='done'?'Completed':'Rescheduled',
+                    'staff_response'=>$action==='done'?'The clinic marked this visit as completed.':'Please contact the clinic to arrange a follow-up visit.',
+                    'responded_at'=>now(),'sync_pending'=>true,
                 ]);
-        }
-
-        $nameParts = $this->splitPatientName($validated['child_name']);
-
-        $existingPatientNo = Patient::where('online_appointment_no', $appointment->appointment_no)
-            ->value('patient_no');
-
-        $patient = Patient::updateOrCreate(
-            [
-                'online_appointment_no' => $appointment->appointment_no,
-            ],
-            [
-                'patient_no' => $existingPatientNo ?? $this->generatePatientNo(),
-                'first_name' => $nameParts['first_name'],
-                'middle_name' => $nameParts['middle_name'],
-                'last_name' => $nameParts['last_name'],
-                'birthdate' => $validated['birthdate'],
-                'sex' => $validated['sex'],
-                'height' => $validated['height'] ?? null,
-                'weight' => $validated['weight'] ?? null,
-                'address' => $validated['address'] ?? null,
-                'guardian_name' => $validated['guardian_name'],
-                'contact_number' => $validated['contact_number'],
-                'emergency_contact' => $validated['emergency_contact'] ?? null,
-                'status' => 'Active',
-            ]
-        );
-
-        $appointmentAction = $validated['appointment_status'] ?? 'done';
-
-        if ($appointmentAction === 'follow_up') {
-            $status = 'Rescheduled';
-            $staffResponse = 'Follow-up consultation is suggested.';
-            $successMessage = 'Patient details saved successfully. Appointment marked as For Follow-up.';
-        } else {
-            $status = 'Completed';
-            $staffResponse = 'Patient details have been saved and consultation was marked as done.';
-            $successMessage = 'Patient details saved successfully. Appointment marked as Done.';
-        }
-
-        $appointment->update([
-            'child_name' => $validated['child_name'],
-            'guardian_name' => $validated['guardian_name'],
-            'contact_number' => $validated['contact_number'],
-            'status' => $status,
-            'staff_response' => $staffResponse,
-            'responded_at' => now(),
-        ]);
-
-        $portalUpdated = $this->updatePortalStatus(
-            $appointment->appointment_no,
-            $status,
-            $staffResponse
-        );
-
-        if (!$portalUpdated) {
-            $successMessage .= ' Local system was updated, but the online booking portal was not updated because it is offline.';
-        }
-
-        return redirect()
-            ->route('appointments.index')
-            ->with('success', $successMessage);
+            }
+            return [$patient,$appointment,$action];
+        });
+        $message='Patient details saved. The patient profile is ready for the clinic visit.';
+        if ($action !== 'register' && !app(BookingSync::class)->push($appointment)) $message.=' Portal status is queued for retry.';
+        return redirect()->route('patients.show',$patient)->with('success',$message);
     }
-
     public function updateByReference(Request $request)
     {
         $validated = $request->validate([
             'appointment_no' => ['required', 'string', 'max:255'],
-            'action' => ['required', 'in:done,follow_up'],
+            'action' => ['required', 'in:done,follow_up'], 'birthdate' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'], 'sex' => ['required', 'in:Male,Female'],
         ]);
 
         $this->syncBookingsFromPortal();
 
         $appointment = OnlineAppointment::where('appointment_no', $validated['appointment_no'])->first();
 
-        if (!$appointment) {
+        if (! $appointment) {
             return back()
                 ->withInput()
                 ->withErrors([
                     'appointment_no' => 'Reference number not found. Please check the appointment reference number.',
                 ]);
         }
-
-        $patient = $this->createPatientFromAppointment($appointment);
 
         if ($validated['action'] === 'done') {
             $status = 'Completed';
@@ -191,11 +150,17 @@ class OnlineBookingController extends Controller
             $successMessage = 'Appointment marked as For Follow-up. The patient was added to the Patients page.';
         }
 
-        $appointment->update([
-            'status' => $status,
-            'staff_response' => $staffResponse,
-            'responded_at' => now(),
-        ]);
+        [$patient, $appointment] = DB::transaction(function () use ($appointment, $validated, $status, $staffResponse) {
+            $appointment = OnlineAppointment::whereKey($appointment->id)->lockForUpdate()->firstOrFail();
+            $appointment->assertStatusChangeAllowed($status, 'appointment_no');
+            $patient = $this->createPatientFromAppointment($appointment, $validated);
+            $appointment->update([
+                'status' => $status, 'patient_id' => $patient->id,
+                'staff_response' => $staffResponse,
+                'responded_at' => now(), 'sync_pending' => true,
+            ]);
+            return [$patient, $appointment];
+        });
 
         $portalUpdated = $this->updatePortalStatus(
             $appointment->appointment_no,
@@ -203,7 +168,7 @@ class OnlineBookingController extends Controller
             $staffResponse
         );
 
-        if (!$portalUpdated) {
+        if (! $portalUpdated) {
             $successMessage .= ' Local system was updated, but the online booking portal was not updated because it is offline.';
         }
 
@@ -234,8 +199,9 @@ class OnlineBookingController extends Controller
         return redirect()->route('appointments.index');
     }
 
-    private function createPatientFromAppointment(OnlineAppointment $appointment): Patient
+    private function createPatientFromAppointment(OnlineAppointment $appointment, array $details): Patient
     {
+        if ($appointment->patient_id) return Patient::findOrFail($appointment->patient_id);
         $nameParts = $this->splitPatientName($appointment->child_name);
 
         return Patient::firstOrCreate(
@@ -247,8 +213,8 @@ class OnlineBookingController extends Controller
                 'first_name' => $nameParts['first_name'],
                 'middle_name' => $nameParts['middle_name'],
                 'last_name' => $nameParts['last_name'],
-                'birthdate' => now()->toDateString(),
-                'sex' => 'Male',
+                'birthdate' => $details['birthdate'],
+                'sex' => $details['sex'],
                 'height' => null,
                 'weight' => null,
                 'address' => null,
@@ -279,7 +245,7 @@ class OnlineBookingController extends Controller
     private function generatePatientNo()
     {
         do {
-            $patientNo = 'PAT-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5));
+            $patientNo = 'PAT-'.now()->format('Ymd').'-'.strtoupper(Str::random(5));
         } while (Patient::where('patient_no', $patientNo)->exists());
 
         return $patientNo;
@@ -287,72 +253,57 @@ class OnlineBookingController extends Controller
 
     private function syncBookingsFromPortal()
     {
-        try {
-            $response = Http::timeout(5)
-                ->withHeaders([
-                    'X-Booking-Token' => config('services.booking_api.token'),
-                ])
-                ->get(config('services.booking_api.url') . '/appointments');
-        } catch (\Throwable $e) {
-            return false;
-        }
-
-        if (!$response->successful()) {
-            return false;
-        }
-
-        foreach ($response->json('appointments', []) as $appointment) {
-            $existing = OnlineAppointment::where('appointment_no', $appointment['appointment_no'])->first();
-
-            $lockedStatuses = ['Completed', 'Rescheduled', 'Cancelled'];
-
-            $status = $appointment['status'] ?? 'Approved';
-            $staffResponse = $appointment['staff_response'] ?? null;
-            $respondedAt = $appointment['responded_at'] ?? null;
-
-            if ($existing && in_array($existing->status, $lockedStatuses)) {
-                $status = $existing->status;
-                $staffResponse = $existing->staff_response;
-                $respondedAt = $existing->responded_at;
-            }
-
-            OnlineAppointment::updateOrCreate(
-                [
-                    'appointment_no' => $appointment['appointment_no'],
-                ],
-                [
-                    'guardian_name' => $appointment['guardian_name'],
-                    'child_name' => $appointment['child_name'],
-                    'contact_number' => $appointment['contact_number'],
-                    'appointment_date' => $appointment['appointment_date'],
-                    'appointment_time' => $appointment['appointment_time'],
-                    'reason_for_visit' => $appointment['reason_for_visit'] ?? null,
-                    'status' => $status,
-                    'staff_response' => $staffResponse,
-                    'responded_at' => $respondedAt,
-                    'synced_at' => now(),
-                ]
-            );
-        }
-
-        return true;
+        return app(BookingSync::class)->sync();
     }
 
     private function updatePortalStatus($appointmentNo, $status, $staffResponse)
     {
-        try {
-            $response = Http::timeout(5)
-                ->withHeaders([
-                    'X-Booking-Token' => config('services.booking_api.token'),
-                ])
-                ->patch(config('services.booking_api.url') . '/appointments/' . $appointmentNo . '/status', [
-                    'status' => $status,
-                    'staff_response' => $staffResponse,
-                ]);
+        return app(BookingSync::class)->push(OnlineAppointment::where('appointment_no', $appointmentNo)->firstOrFail());
+    }
 
-            return $response->successful();
-        } catch (\Throwable $e) {
-            return false;
+    public function updateStatus(Request $request)
+    {
+        $validated = $request->validate([
+            'appointment_no' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'in:Pending,Approved,Declined,Cancelled,Rescheduled'],
+        ]);
+
+        $appointment = OnlineAppointment::where('appointment_no', $validated['appointment_no'])->first();
+
+        if (! $appointment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Appointment not found.',
+            ], 404);
         }
+
+        $staffResponse = match ($validated['status']) {
+            'Cancelled' => 'Appointment cancelled by clinic staff.',
+            'Rescheduled' => 'Please contact the clinic to arrange a follow-up schedule.',
+            'Approved' => 'Your appointment has been approved.',
+            'Declined' => 'Please contact the clinic for an alternative appointment.',
+            default => 'Your appointment is awaiting review.',
+        };
+        DB::transaction(function () use ($appointment, $validated, $staffResponse) {
+            $appointment = OnlineAppointment::whereKey($appointment->id)->lockForUpdate()->firstOrFail();
+            $appointment->assertStatusChangeAllowed($validated['status']);
+            $appointment->update([
+                'status' => $validated['status'],
+                'staff_response' => $staffResponse,
+                'responded_at' => now(), 'sync_pending' => true,
+            ]);
+        });
+
+        $portalUpdated = $this->updatePortalStatus(
+            $appointment->appointment_no,
+            $validated['status'],
+            $staffResponse
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => $portalUpdated ? 'Appointment status updated successfully.' : 'Saved locally. Portal update is pending and will retry.', 'portal_updated' => $portalUpdated,
+        ]);
     }
 }
+

@@ -1,0 +1,7 @@
+<div class="card clinic-card"><div class="card-body p-4"><h2 class="h5">Patient account</h2><p class="small text-muted">Internal billing statement. Payment records do not replace an official invoice or receipt. Enter the clinic's actual agreed fees.</p>
+@forelse($records as $charge) @include('billing.charge') @empty<p class="text-muted py-3">No charges recorded.</p>@endforelse
+<details class="record-form mt-4" @if($errors->any()) open @endif><summary class="fw-semibold">+ Add charge</summary><form method="POST" action="{{ route('charges.store',$patient) }}" class="mt-3">@csrf<input type="hidden" name="request_key" value="{{ (string)\Illuminate\Support\Str::uuid() }}"><div class="row g-3">
+<div class="col-12"><label for="charge-description" class="form-label">Service / charge description</label><input id="charge-description" name="description" class="form-control" required maxlength="255" value="{{ old('description') }}"></div>
+<div class="col-md-6"><label for="charge-date" class="form-label">Charge date</label><input id="charge-date" name="charged_on" type="date" class="form-control" required value="{{ old('charged_on',today()->toDateString()) }}" max="{{ today()->toDateString() }}"></div>
+<div class="col-md-6"><label for="charge-amount" class="form-label">Amount (PHP)</label><input id="charge-amount" type="number" name="amount" step=".01" min=".01" max="9999999.99" required class="form-control" value="{{ old('amount') }}"></div></div><button class="btn btn-primary mt-3">Save charge</button></form></details>
+</div></div>

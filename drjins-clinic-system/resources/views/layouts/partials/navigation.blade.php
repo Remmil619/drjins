@@ -1,7 +1,7 @@
-<nav class="navbar navbar-expand-lg clinic-navbar" aria-label="Main navigation">
+<nav class="navbar navbar-expand-xl clinic-navbar" aria-label="Main navigation">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="{{ route('dashboard') }}">
-            Dr. Jn's Childer Clinic
+        <a class="navbar-brand clinic-brand" href="{{ route('dashboard') }}">
+            <span class="brand-symbol" aria-hidden="true">+</span><span>Dr. Jn's<small>CHILDREN'S CLINIC</small></span>
         </a>
 
         <button
@@ -33,7 +33,14 @@
                         Patients
                     </a>
                 </li>
-                <li class="nav-item dropdown ms-lg-2">
+                <li class="nav-item"><a href="{{ route('queue.index') }}" class="nav-link {{ request()->routeIs('queue.*')?'active':'' }}">Queue</a></li>
+<li class="nav-item dropdown"><button type="button" class="nav-link dropdown-toggle {{ request()->routeIs('reminders.*','billing.*','reports.*','audit.*')?'active':'' }}" data-bs-toggle="dropdown" aria-expanded="false">Operations</button><ul class="dropdown-menu">
+<li><a class="dropdown-item" href="{{ route('reminders.index') }}">Follow-ups & vaccines</a></li>
+<li><a class="dropdown-item" href="{{ route('billing.index') }}">Billing & payments</a></li>
+<li><a class="dropdown-item" href="{{ route('reports.index') }}">Reports</a></li>
+<li><a class="dropdown-item" href="{{ route('audit.index') }}">Activity log</a></li>
+</ul></li>
+<li class="nav-item dropdown ms-lg-2">
                     <button
                         class="btn account-menu-button dropdown-toggle"
                         type="button"
@@ -111,3 +118,5 @@
         </div>
     </div>
 </div>
+
+

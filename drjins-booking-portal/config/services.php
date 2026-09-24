@@ -2,6 +2,8 @@
 
 return [
 
+    'booking_api_token' => env('BOOKING_API_TOKEN'),
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

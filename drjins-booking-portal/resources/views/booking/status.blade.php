@@ -1,61 +1,15 @@
 @extends('layouts.app')
-
+@section('title', 'Check appointment status')
 @section('content')
-
-<div class="hero text-center">
-    <div class="container">
-        <h1 class="fw-bold">Check Appointment Status</h1>
-        <p class="mb-0">Enter your appointment reference number below.</p>
-    </div>
-</div>
-
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-7">
-
-            <div class="card booking-card">
-                <div class="card-body p-4">
-                    <form action="{{ route('booking.status') }}" method="GET">
-                        <label class="form-label">Appointment Reference Number</label>
-
-                        <div class="input-group">
-                            <input type="text" name="appointment_no" class="form-control" value="{{ request('appointment_no') }}" placeholder="Example: APT-20260709-ABCDE">
-                            <button class="btn btn-primary" type="submit">Check</button>
-                        </div>
-                    </form>
-
-                    @if (request('appointment_no') && !$appointment)
-                        <div class="alert alert-danger mt-4 mb-0">
-                            No appointment found using that reference number.
-                        </div>
-                    @endif
-
-                    @if ($appointment)
-                        <div class="alert alert-info mt-4">
-                            <strong>Appointment No.:</strong> {{ $appointment->appointment_no }}<br>
-                            <strong>Guardian:</strong> {{ $appointment->guardian_name }}<br>
-                            <strong>Child:</strong> {{ $appointment->child_name }}<br>
-                            <strong>Date:</strong> {{ date('F d, Y', strtotime($appointment->appointment_date)) }}<br>
-                            <strong>Time:</strong> {{ date('h:i A', strtotime($appointment->appointment_time)) }}<br>
-                            <strong>Status:</strong> {{ $appointment->status == 'Approved' ? 'Booked' : $appointment->status }}
-                        </div>
-
-                        @if ($appointment->staff_response)
-                            <div class="alert alert-secondary">
-                                <strong>Clinic Response:</strong><br>
-                                {{ $appointment->staff_response }}
-                            </div>
-                        @else
-                            <div class="alert alert-warning mb-0">
-                                The clinic has not responded yet. Please check again later.
-                            </div>
-                        @endif
-                    @endif
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
+<div class="hero text-center"><div class="container"><span class="eyebrow">YOUR VISIT, AT A GLANCE</span><h1>Check appointment status</h1><p>Use your reference and the mobile number you provided when booking.</p></div></div>
+<div class="container mt-5"><div class="row justify-content-center"><div class="col-md-8 col-lg-7"><div class="card booking-card"><div class="card-body p-4 p-md-5">
+@if($errors->any())<div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+<form action="{{ route('booking.status') }}" method="POST">@csrf
+<div class="mb-3"><label class="form-label" for="appointment_no">Appointment reference</label><input id="appointment_no" name="appointment_no" class="form-control" value="{{ old('appointment_no', request('appointment_no')) }}" placeholder="APT-YYYYMMDD-XXXXX" maxlength="40" required></div>
+<div class="mb-4"><label class="form-label" for="contact_number">Booking mobile number</label><input id="contact_number" type="tel" name="contact_number" class="form-control" value="{{ old('contact_number') }}" placeholder="09XXXXXXXXX" autocomplete="tel" required></div>
+<button class="btn btn-primary w-100" type="submit">Check appointment</button></form>
+@if(request()->isMethod('post') && !$appointment)<div class="alert alert-warning mt-4 mb-0" role="status">No matching appointment found. Check both your reference and mobile number.</div>@endif
+@if($appointment)<div class="status-box mt-4" style="background:var(--mint)" role="status"><span class="badge text-bg-success mb-3">{{ $appointment->status === 'Approved' ? 'Booked' : $appointment->status }}</span><h2 class="fs-5">{{ $appointment->appointment_no }}</h2><dl class="row mt-3 mb-0"><dt class="col-sm-4">Guardian</dt><dd class="col-sm-8">{{ $appointment->guardian_name }}</dd><dt class="col-sm-4">Child</dt><dd class="col-sm-8">{{ $appointment->child_name }}</dd><dt class="col-sm-4">Date</dt><dd class="col-sm-8">{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('F j, Y') }}</dd><dt class="col-sm-4">Time</dt><dd class="col-sm-8">{{ \Carbon\Carbon::parse($appointment->appointment_time)->format('g:i A') }}</dd></dl></div>@if($appointment->staff_response)<div class="clinic-note mt-3"><strong>Clinic response</strong><p class="mb-0 mt-2">{{ $appointment->staff_response }}</p></div>@endif<button type="button" class="btn btn-outline-primary mt-3" onclick="window.print()">Print appointment</button>@endif
+<p class="small mt-4 mb-0">Need to change your booking? <a href="tel:{{ config('clinic.phone') }}">Call the clinic</a> with your reference number.</p>
+</div></div></div></div></div>
 @endsection
