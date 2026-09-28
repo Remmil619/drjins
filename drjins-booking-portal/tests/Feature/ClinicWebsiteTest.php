@@ -23,7 +23,7 @@ class ClinicWebsiteTest extends TestCase
     private function booking(array $overrides = []): array
     {
         return array_replace([
-            'guardian_name' => 'Test Guardian', 'child_name' => 'Test Child',
+            'guardian_first_name' => 'Test', 'guardian_surname' => 'Guardian', 'child_first_name' => 'Test', 'child_surname' => 'Child',
             'guardian_relationship' => 'Mother', 'guardian_address' => 'Abuyog, Leyte',
             'child_date_of_birth' => '2020-01-15', 'child_sex' => 'Female',
             'contact_number' => '09123456789', 'appointment_date' => '2026-09-24',
@@ -47,6 +47,29 @@ class ClinicWebsiteTest extends TestCase
         $this->get($response->headers->get('Location'))->assertOk()->assertSee('Appointment Booked')->assertSee('Test Child');
         $this->post('/book-appointment', $this->booking())->assertSessionHasErrors('appointment_time');
         $this->assertDatabaseCount('appointments', 1);
+    }
+
+    public function test_separate_names_are_validated_and_saved_without_emergency_contact(): void
+    {
+        $this->get('/book-appointment')->assertOk()
+            ->assertSee('name="guardian_first_name"', false)
+            ->assertSee('name="child_surname"', false)
+            ->assertDontSee('Emergency Contact');
+
+        $this->post('/book-appointment', $this->booking([
+            'guardian_surname' => '', 'child_first_name' => '',
+        ]))->assertSessionHasErrors(['guardian_surname', 'child_first_name']);
+
+        $this->post('/book-appointment', $this->booking([
+            'guardian_middle_name' => 'Maria', 'child_middle_name' => 'Santos',
+            'emergency_contact_name' => 'Unused Contact',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('appointments', [
+            'guardian_name' => 'Test Maria Guardian',
+            'child_name' => 'Test Santos Child',
+            'emergency_contact_name' => null,
+        ]);
     }
 
     public function test_invalid_past_closed_and_out_of_window_slots_are_rejected(): void
@@ -125,7 +148,7 @@ class ClinicWebsiteTest extends TestCase
             'child_date_of_birth' => '', 'child_sex' => '',
         ]))->assertRedirect('/book-appointment')->assertSessionHasErrors([
             'guardian_relationship', 'guardian_address', 'child_date_of_birth', 'child_sex',
-        ])->assertSessionHasInput('child_name', 'Test Child');
+        ])->assertSessionHasInput('child_first_name', 'Test');
         $this->assertDatabaseCount('appointments', 0);
     }
 
@@ -155,7 +178,7 @@ class ClinicWebsiteTest extends TestCase
             ->with('appointment-2026-09-24-08:00', 15)->once()->andReturn($lock);
         $this->from('/book-appointment')->post('/book-appointment', $this->booking())
             ->assertRedirect('/book-appointment')->assertSessionHasErrors('appointment_time')
-            ->assertSessionHasInput('child_name', 'Test Child');
+            ->assertSessionHasInput('child_first_name', 'Test');
         $this->assertDatabaseCount('appointments', 0);
     }
 

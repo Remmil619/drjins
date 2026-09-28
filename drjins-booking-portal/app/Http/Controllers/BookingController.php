@@ -21,16 +21,18 @@ class BookingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'guardian_name' => 'required|string|max:255',
+            'guardian_first_name' => 'required|string|max:80',
+            'guardian_middle_name' => 'nullable|string|max:80',
+            'guardian_surname' => 'required|string|max:80',
             'guardian_relationship' => 'required|string|max:100',
             'guardian_email' => 'nullable|email|max:255',
             'guardian_address' => 'required|string|max:500',
-            'child_name' => 'required|string|max:255',
+            'child_first_name' => 'required|string|max:80',
+            'child_middle_name' => 'nullable|string|max:80',
+            'child_surname' => 'required|string|max:80',
             'child_date_of_birth' => 'required|date_format:Y-m-d|before_or_equal:today',
-            'child_sex' => 'required|in:Female,Male,Prefer not to say',
+            'child_sex' => 'required|in:Male,Female',
             'contact_number' => ['required', 'regex:/^(09\d{9}|\+639\d{9})$/'],
-            'emergency_contact_name' => 'nullable|string|max:255',
-            'emergency_contact_number' => ['nullable', 'regex:/^(09\d{9}|\+639\d{9})$/'],
             'allergies' => 'nullable|string|max:2000',
             'current_medications' => 'nullable|string|max:2000',
             'medical_notes' => 'nullable|string|max:2000',
@@ -39,6 +41,14 @@ class BookingController extends Controller
             'reason_for_visit' => 'nullable|string|max:1000',
             'consent' => 'accepted',
         ]);
+
+        foreach (['guardian', 'child'] as $person) {
+            $validated[$person.'_name'] = implode(' ', array_filter([
+                $validated[$person.'_first_name'],
+                $validated[$person.'_middle_name'] ?? null,
+                $validated[$person.'_surname'],
+            ], fn ($part) => $part !== null && $part !== ''));
+        }
 
         try {
             return Cache::lock('appointment-'.$validated['appointment_date'].'-'.$validated['appointment_time'], 15)->block(5, function () use ($validated, $request) {
@@ -62,8 +72,6 @@ class BookingController extends Controller
                     'child_date_of_birth' => $validated['child_date_of_birth'],
                     'child_sex' => $validated['child_sex'],
                     'contact_number' => $validated['contact_number'],
-                    'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
-                    'emergency_contact_number' => $validated['emergency_contact_number'] ?? null,
                     'allergies' => $validated['allergies'] ?? null,
                     'current_medications' => $validated['current_medications'] ?? null,
                     'medical_notes' => $validated['medical_notes'] ?? null,
