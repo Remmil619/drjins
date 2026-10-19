@@ -19,13 +19,17 @@ class LoginController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
+
             'email' => ['required', 'email'],
+
             'password' => ['required', 'string'],
+
         ]);
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'email' => 'The email address or password is incorrect.',
+
             ]);
         }
 

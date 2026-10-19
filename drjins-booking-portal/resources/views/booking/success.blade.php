@@ -30,8 +30,8 @@
                     </p>
 
                     <div class="alert alert-primary">
-                        <strong>Appointment Reference Number</strong>
-                        <div class="fs-3 fw-bold mt-2">{{ $appointment->appointment_no }}</div>
+                        <strong>Child's full name</strong>
+                        <div class="fs-3 fw-bold mt-2">{{ $appointment->child_name }}</div>
                     </div>
 
                     <div class="status-box bg-light mb-4">
@@ -53,13 +53,13 @@
                     </div>
 
                     <p class="text-muted">
-                        Save your reference number. You can use it to check the status of your appointment.
+                        Use your child's full name and booking mobile number to check appointment status.
                     </p>
 
-                    <a href="{{ route('booking.status', ['appointment_no' => $appointment->appointment_no]) }}" class="btn btn-book">
+                    <a href="{{ route('booking.status', ['child_name' => $appointment->child_name]) }}" class="btn btn-book">
                         Check Appointment Status
                     </a>
-                    <button type="button" class="btn btn-outline-primary mt-2 mt-sm-0" onclick="window.print()">Print appointment</button>
+                    
                 </div>
             </div>
         </div>
@@ -76,8 +76,8 @@
             </div>
             <div class="modal-body">
                 <p>Your appointment for <strong>{{ $appointment->child_name }}</strong> was booked successfully.</p>
-                <p class="mb-1">Reference number</p>
-                <p class="fs-5 fw-bold mb-0">{{ $appointment->appointment_no }}</p>
+                <p class="mb-1">Child's full name</p>
+                <p class="fs-5 fw-bold mb-0">{{ $appointment->child_name }}</p>
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Continue</button>

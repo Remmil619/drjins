@@ -1,16 +1,33 @@
 <?php
+
 namespace App\Providers;
+
+use App\Models\Charge;
+use App\Models\Consultation;
+use App\Models\GrowthRecord;
+use App\Models\Immunization;
+use App\Models\MedicalAlert;
+use App\Models\OnlineAppointment;
+use App\Models\Patient;
+use App\Models\Payment;
+use App\Models\QueueEntry;
+use App\Observers\RecordObserver;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
+
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void {}
+
     public function boot(): void
     {
-        \Illuminate\Pagination\Paginator::useBootstrapFive();
+        Paginator::useBootstrapFive();
         foreach ([
-            \App\Models\Patient::class, \App\Models\OnlineAppointment::class, \App\Models\Consultation::class,
-            \App\Models\QueueEntry::class, \App\Models\GrowthRecord::class, \App\Models\Immunization::class,
-            \App\Models\MedicalAlert::class, \App\Models\Charge::class, \App\Models\Payment::class,
-        ] as $model) $model::observe(\App\Observers\RecordObserver::class);
+            Patient::class, OnlineAppointment::class, Consultation::class,
+            QueueEntry::class, GrowthRecord::class, Immunization::class,
+            MedicalAlert::class, Charge::class, Payment::class,
+        ] as $model) {
+            $model::observe(RecordObserver::class);
+        }
     }
 }

@@ -1,11 +1,12 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
+use App\Models\Consultation;
 use App\Models\GrowthRecord;
 use App\Models\Immunization;
 use App\Models\MedicalAlert;
-use App\Models\Consultation;
+use App\Models\Patient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -15,69 +16,131 @@ class PediatricRecordController extends Controller
     public function growth(Request $request, Patient $patient)
     {
         $data = $request->validate([
-            'measured_on'=>['required','date_format:Y-m-d','before_or_equal:today','after_or_equal:'.$patient->birthdate],
-            'weight_kg'=>'required|numeric|gt:0|max:500',
-            'height_cm'=>'required|numeric|gt:0|max:300',
-            'head_cm'=>'nullable|numeric|gt:0|max:100',
-            'temperature_c'=>'nullable|numeric|between:25,45',
-            'notes'=>'nullable|string|max:2000',
+
+            'measured_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:today', 'after_or_equal:'.$patient->birthdate],
+
+            'weight_kg' => 'required|numeric|gt:0|max:500',
+
+            'height_cm' => 'required|numeric|gt:0|max:300',
+
+            'head_cm' => 'nullable|numeric|gt:0|max:100',
+
+            'temperature_c' => 'nullable|numeric|between:25,45',
+
+            'notes' => 'nullable|string|max:2000',
+
         ]);
-        DB::transaction(fn() => GrowthRecord::create($data + ['patient_id'=>$patient->id,'user_id'=>$request->user()->id]));
-        return back()->with('success','Growth measurements saved.');
+        DB::transaction(fn () => GrowthRecord::create($data + [
+            'patient_id' => $patient->id,
+            'user_id' => $request->user()->id,
+        ]));
+
+        return back()->with('success', 'Growth measurements saved.');
     }
 
     public function immunization(Request $request, Patient $patient)
     {
         $data = $request->validate([
-            'vaccine'=>'required|string|max:150','dose'=>'required|string|max:50',
-            'administered_on'=>['required','date_format:Y-m-d','before_or_equal:today','after_or_equal:'.$patient->birthdate],
-            'source'=>'required|in:clinic,external_record,guardian_report',
-            'provider'=>'required|string|max:150','lot_number'=>'nullable|string|max:100',
-            'expiry_date'=>'nullable|date_format:Y-m-d|after_or_equal:administered_on',
-            'next_due_on'=>'nullable|date_format:Y-m-d|after:administered_on','notes'=>'nullable|string|max:2000',
+
+            'vaccine' => 'required|string|max:150',
+            'dose' => 'required|string|max:50',
+
+            'administered_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:today', 'after_or_equal:'.$patient->birthdate],
+
+            'source' => 'required|in:clinic,external_record,guardian_report',
+
+            'provider' => 'required|string|max:150',
+            'lot_number' => 'nullable|string|max:100',
+
+            'expiry_date' => 'nullable|date_format:Y-m-d|after_or_equal:administered_on',
+
+            'next_due_on' => 'nullable|date_format:Y-m-d|after:administered_on',
+            'notes' => 'nullable|string|max:2000',
+
         ]);
-        DB::transaction(function() use($data,$patient,$request) {
+        DB::transaction(function () use ($data, $patient, $request) {
             Patient::whereKey($patient->id)->lockForUpdate()->firstOrFail();
-            if (Immunization::where('patient_id',$patient->id)->whereNull('voided_at')->where('vaccine',$data['vaccine'])->where('dose',$data['dose'])->whereDate('administered_on',$data['administered_on'])->exists()) {
-                throw ValidationException::withMessages(['vaccine'=>'This vaccine dose and date are already recorded.']);
+            if (Immunization::where('patient_id', $patient->id)->whereNull('voided_at')->where('vaccine', $data['vaccine'])->where('dose', $data['dose'])->whereDate('administered_on', $data['administered_on'])->exists()) {
+                throw ValidationException::withMessages([
+                    'vaccine' => 'This vaccine dose and date are already recorded.',
+                ]);
             }
-            Immunization::create($data + ['patient_id'=>$patient->id,'user_id'=>$request->user()->id]);
+            Immunization::create($data + [
+                'patient_id' => $patient->id,
+                'user_id' => $request->user()->id,
+            ]);
         });
-        return back()->with('success','Vaccination history saved.');
+
+        return back()->with('success', 'Vaccination history saved.');
     }
 
     public function alert(Request $request, Patient $patient)
     {
-        $data = $request->validate(['category'=>'required|in:Allergy,Medical condition,Other','description'=>'required|string|max:500','reaction'=>'nullable|string|max:500']);
-        DB::transaction(fn() => MedicalAlert::create($data + ['patient_id'=>$patient->id,'user_id'=>$request->user()->id]));
-        return back()->with('success','Patient alert recorded.');
+        $data = $request->validate([
+            'category' => 'required|in:Allergy,Medical condition,Other',
+            'description' => 'required|string|max:500',
+            'reaction' => 'nullable|string|max:500',
+        ]);
+        DB::transaction(fn () => MedicalAlert::create($data + [
+            'patient_id' => $patient->id,
+            'user_id' => $request->user()->id,
+        ]));
+
+        return back()->with('success', 'Patient alert recorded.');
     }
 
     public function void(Request $request, Patient $patient, string $type, int $record)
     {
-        $data = $request->validate(['void_reason'=>'required|string|min:5|max:500']);
-        $class = ['growth'=>GrowthRecord::class,'immunization'=>Immunization::class,'alert'=>MedicalAlert::class,'consultation'=>Consultation::class][$type] ?? null;
-        abort_unless($class,404);
-        DB::transaction(function() use($class,$patient,$record,$data) {
-            $entry = $class::where('patient_id',$patient->id)->whereKey($record)->lockForUpdate()->firstOrFail();
-            if ($entry->voided_at) throw ValidationException::withMessages(['void_reason'=>'This record has already been voided.']);
-            $entry->update($data + ['voided_at'=>now()]);
+        $data = $request->validate([
+            'void_reason' => 'required|string|min:5|max:500',
+        ]);
+        $class = [
+            'growth' => GrowthRecord::class,
+            'immunization' => Immunization::class,
+            'alert' => MedicalAlert::class,
+            'consultation' => Consultation::class,
+        ][$type] ?? null;
+        abort_unless($class, 404);
+        DB::transaction(function () use ($class, $patient, $record, $data) {
+            $entry = $class::where('patient_id', $patient->id)->whereKey($record)->lockForUpdate()->firstOrFail();
+            if ($entry->voided_at) {
+                throw ValidationException::withMessages([
+                    'void_reason' => 'This record has already been voided.',
+                ]);
+            }
+            $entry->update($data + [
+                'voided_at' => now(),
+            ]);
         });
-        return back()->with('success','Record voided. The original remains in the history; add a corrected entry if needed.');
+
+        return back()->with('success', 'Record voided. The original remains in the history; add a corrected entry if needed.');
     }
 
     public function closeReminder(Request $request, string $type, int $record)
     {
-        $data = $request->validate(['outcome'=>'required|string|min:5|max:255']);
-        $class = ['consultation'=>Consultation::class,'immunization'=>Immunization::class][$type] ?? null;
-        abort_unless($class,404);
-        DB::transaction(function() use($class,$record,$data,$type) {
+        $data = $request->validate([
+            'outcome' => 'required|string|min:5|max:255',
+        ]);
+        $class = [
+            'consultation' => Consultation::class,
+            'immunization' => Immunization::class,
+        ][$type] ?? null;
+        abort_unless($class, 404);
+        DB::transaction(function () use ($class, $record, $data, $type) {
             $entry = $class::whereKey($record)->whereNull('voided_at')->lockForUpdate()->firstOrFail();
             $prefix = $type === 'consultation' ? 'follow_up' : 'reminder';
             $dateField = $type === 'consultation' ? 'follow_up_date' : 'next_due_on';
-            if (!$entry->$dateField || $entry->{$prefix.'_closed_at'}) throw ValidationException::withMessages(['outcome'=>'This reminder is no longer open.']);
-            $entry->update([$prefix.'_closed_at'=>now(),$prefix.'_outcome'=>$data['outcome']]);
+            if (! $entry->$dateField || $entry->{$prefix.'_closed_at'}) {
+                throw ValidationException::withMessages([
+                    'outcome' => 'This reminder is no longer open.',
+                ]);
+            }
+            $entry->update([
+                $prefix.'_closed_at' => now(),
+                $prefix.'_outcome' => $data['outcome'],
+            ]);
         });
-        return back()->with('success','Reminder closed with the recorded outcome.');
+
+        return back()->with('success', 'Reminder closed with the recorded outcome.');
     }
 }

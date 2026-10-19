@@ -24,7 +24,7 @@ return new class extends Migration
                 'Completed',
                 'Cancelled',
                 'No Show',
-                'Rescheduled'
+                'Rescheduled',
             ])->default('Pending');
             $table->string('source')->default('online');
             $table->text('remarks')->nullable();

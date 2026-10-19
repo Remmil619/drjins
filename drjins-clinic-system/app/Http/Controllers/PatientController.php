@@ -2,7 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Charge;
+use App\Models\ClinicVaccine;
+use App\Models\GrowthRecord;
+use App\Models\Immunization;
+use App\Models\MedicalAlert;
 use App\Models\Patient;
+use App\Models\Payment;
+use App\Models\QueueEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -10,7 +17,9 @@ class PatientController extends Controller
 {
     public function index(Request $request)
     {
-        $filters = $request->validate(['search' => 'nullable|string|max:100']);
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:100',
+        ]);
         $search = $filters['search'] ?? '';
 
         $patients = Patient::query()
@@ -46,22 +55,42 @@ class PatientController extends Controller
     public function store(Request $request, ?Patient $patient = null)
     {
         $validated = $request->validate([
+
             'first_name' => ['required', 'string', 'max:255'],
+
             'middle_name' => ['nullable', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'], 'suffix' => ['nullable','string','max:20'],
+
+            'last_name' => ['required', 'string', 'max:255'],
+            'suffix' => ['nullable', 'string', 'max:20'],
 
             'birthdate' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+
             'sex' => ['required', 'in:Male,Female'],
+
             'height' => ['nullable', 'string', 'max:50'],
+
             'weight' => ['nullable', 'string', 'max:50'],
+
             'temperature' => ['nullable', 'numeric', 'between:25,45'],
+
+            'barangay' => 'nullable|required_with:municipality,province|string|max:150',
+
+            'municipality' => 'nullable|required_with:barangay,province|string|max:150',
+
+            'province' => 'nullable|required_with:barangay,municipality|string|max:150',
+
             'address' => ['nullable', 'string', 'max:500'],
 
             'guardian_name' => ['required', 'string', 'max:255'],
+
             'guardian_relationship' => ['nullable', 'string', 'max:100'],
+
             'contact_number' => ['required', 'string', 'max:20'],
+
             'emergency_contact' => ['nullable', 'string', 'max:20'],
+
             'status' => ['required', 'in:Active,Inactive'],
+
         ]);
 
         if (! $patient) {
@@ -81,20 +110,28 @@ class PatientController extends Controller
 
     public function show(Request $request, Patient $patient)
     {
-        $request->validate(['tab'=>'nullable|in:consultations,growth,immunizations,alerts,billing']);
-        $tab=$request->input('tab') ?: 'consultations';
+        $request->validate([
+            'tab' => 'nullable|in:consultations,growth,immunizations,alerts,billing',
+        ]);
+        $tab = $request->input('tab') ?: 'consultations';
         $patient->load('appointment');
-        $alerts=\App\Models\MedicalAlert::where('patient_id',$patient->id)->whereNull('voided_at')->get();
-        $activeQueue=\App\Models\QueueEntry::where('patient_id',$patient->id)->whereDate('visit_date',today())->whereIn('status',['waiting','in_consultation'])->first();
-        $records=match($tab) {
-            'growth'=>\App\Models\GrowthRecord::where('patient_id',$patient->id)->orderByDesc('measured_on')->orderByDesc('id')->paginate(15)->withQueryString(),
-            'immunizations'=>\App\Models\Immunization::where('patient_id',$patient->id)->orderByDesc('administered_on')->orderByDesc('id')->paginate(15)->withQueryString(),
-            'alerts'=>\App\Models\MedicalAlert::where('patient_id',$patient->id)->latest()->paginate(15)->withQueryString(),
-            'billing'=>\App\Models\Charge::with('payments')->where('patient_id',$patient->id)->latest()->paginate(15)->withQueryString(),
-            default=>$patient->consultations()->with('author')->paginate(10)->withQueryString(),
+        $alerts = MedicalAlert::where('patient_id', $patient->id)->whereNull('voided_at')->get();
+        $activeQueue = QueueEntry::where('patient_id', $patient->id)->whereDate('visit_date', today())->whereIn('status', ['waiting', 'in_consultation'])->first();
+        $records = match ($tab) {
+            'growth' => GrowthRecord::where('patient_id', $patient->id)->orderByDesc('measured_on')->orderByDesc('id')->paginate(15)->withQueryString(),
+            'immunizations' => Immunization::where('patient_id', $patient->id)->orderByDesc('administered_on')->orderByDesc('id')->paginate(15)->withQueryString(),
+            'alerts' => MedicalAlert::where('patient_id', $patient->id)->latest()->paginate(15)->withQueryString(),
+            'billing' => Charge::with('payments')->where('patient_id', $patient->id)->latest()->paginate(15)->withQueryString(),
+            default => $patient->consultations()->with('author')->paginate(10)->withQueryString(),
         };
-        return view('patients.show',compact('patient','tab','alerts','activeQueue','records'));
+        $fees = Charge::where('patient_id', $patient->id)->whereNull('voided_at')->sum('amount_centavos');
+        $paid = Payment::whereNull('voided_at')->whereHas('charge', fn ($query) => $query->where('patient_id', $patient->id)->whereNull('voided_at'))->sum('amount_centavos');
+        $clinicVaccines = $tab === 'immunizations' ? ClinicVaccine::orderBy('name')->get() : collect();
+        $cartCharges = $tab === 'billing' ? Charge::with('payments')->where('patient_id', $patient->id)->whereNull('voided_at')->orderBy('id')->get()->filter(fn ($charge) => $charge->balance_centavos > 0) : collect();
+
+        return view('patients.show', compact('patient', 'tab', 'alerts', 'activeQueue', 'records', 'fees', 'paid', 'clinicVaccines', 'cartCharges'));
     }
+
     private function generatePatientNo()
     {
         do {
@@ -104,4 +141,3 @@ class PatientController extends Controller
         return $patientNo;
     }
 }
-

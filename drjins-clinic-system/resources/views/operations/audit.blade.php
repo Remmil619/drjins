@@ -1,7 +1,63 @@
 @extends('layouts.app')
 @section('content')
-<section class="page-header"><div class="container"><span class="eyebrow">ACCOUNTABILITY</span><h1>Activity log</h1><p class="mb-0">Who created or changed records, and which fields changed.</p></div></section>
-<div class="container"><div class="card clinic-card"><div class="card-body p-4"><p class="small text-muted">Clinical values, passwords, and API secrets are not duplicated in this log. Entries cover activity since this feature was installed.</p><form method="GET" class="d-flex gap-2 mb-4"><label for="audit-type" class="visually-hidden">Record type</label><select id="audit-type" class="form-select" name="type"><option value="">All record types</option>@foreach(['Patient','OnlineAppointment','QueueEntry','Consultation','GrowthRecord','Immunization','MedicalAlert','Charge','Payment'] as $type)<option @selected(request('type')===$type)>{{ $type }}</option>@endforeach</select><button class="btn btn-primary">Filter</button></form>
-<div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Staff</th><th>Action</th><th>Record</th><th>Fields changed</th></tr></thead><tbody>@forelse($logs as $log)<tr><td>{{ $log->created_at->format('M j, Y g:i:s A') }}</td><td>{{ $log->user?->name ?? 'System sync' }}</td><td>{{ $log->action }}</td><td>{{ $log->record_type }} #{{ $log->record_id }}</td><td class="small">{{ implode(', ',$log->changed_fields) }}</td></tr>@empty<tr><td colspan="5" class="text-center text-muted py-4">No activity recorded yet.</td></tr>@endforelse</tbody></table></div>{{ $logs->links() }}
-</div></div></div>
+
+    <section class="page-header">
+        <div class="container">
+            <span class="eyebrow">ACCOUNTABILITY</span>
+            <h1>Activity log</h1>
+            <p class="mb-0">Who created or changed records, and which fields changed.</p>
+        </div>
+    </section>
+    <div class="container">
+        <div class="card clinic-card">
+            <div class="card-body p-4">
+                <p class="small text-muted">Clinical values, passwords, and API secrets are not duplicated in this log.
+                    Entries cover activity since this feature was installed.</p>
+
+                <form method="GET" class="d-flex gap-2 mb-4">
+                    <label for="audit-type" class="visually-hidden">Record
+                        type</label>
+                    <select
+                        id="audit-type"
+                        class="form-select"
+                        name="type"
+                    >
+                        <option value="">All record types</option>
+                        @foreach (['Patient', 'OnlineAppointment', 'QueueEntry', 'Consultation', 'GrowthRecord', 'Immunization', 'MedicalAlert', 'Charge', 'Payment'] as $type)
+                            <option @selected(request('type') === $type)>{{ $type }}</option>
+                        @endforeach
+                    </select>
+                    <button class="btn btn-primary">Filter</button>
+                </form>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Staff</th>
+                                <th>Action</th>
+                                <th>Record</th>
+                                <th>Fields changed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($logs as $log)
+                                <tr>
+                                    <td>{{ $log->created_at->format('M j, Y g:i:s A') }}</td>
+                                    <td>{{ $log->user?->name ?? 'System sync' }}</td>
+                                    <td>{{ $log->action }}</td>
+                                    <td>{{ $log->record_type }} #{{ $log->record_id }}</td>
+                                    <td class="small">{{ implode(', ', $log->changed_fields) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">No activity recorded yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>{{ $logs->links() }}
+            </div>
+        </div>
+    </div>
 @endsection

@@ -25,11 +25,16 @@ class AuthenticationTest extends TestCase
 
     public function test_staff_can_sign_in_with_valid_credentials(): void
     {
-        $user = User::factory()->create(['password' => 'secure-password']);
+        $user = User::factory()->create([
+            'password' => 'secure-password',
+        ]);
 
         $this->post('/login', [
+
             'email' => $user->email,
+
             'password' => 'secure-password',
+
         ])->assertRedirect('/dashboard');
 
         $this->assertAuthenticatedAs($user);
@@ -40,8 +45,11 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->from('/login')->post('/login', [
+
             'email' => $user->email,
+
             'password' => 'incorrect-password',
+
         ])->assertRedirect('/login')->assertSessionHasErrors('email');
 
         $this->assertGuest();

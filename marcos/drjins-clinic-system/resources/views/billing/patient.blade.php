@@ -1,0 +1,12 @@
+<div class="card clinic-card"><div class="card-body p-4"><h2 class="h5">Billing & Fees</h2><div class="row g-3 my-3">@foreach(['Total fees'=>$fees,'Paid'=>$paid,'Balance'=>$fees-$paid] as $label=>$amount)<div class="col-md-4"><div class="border rounded p-3"><div class="small text-muted">{{ $label }}</div><strong>PHP {{ number_format($amount/100, 2) }}</strong></div></div>@endforeach</div><p class="small text-muted">Internal billing statement. Payment records do not replace an official invoice or receipt. Enter the clinic's actual agreed fees.</p>
+@include('billing.cart')
+<details class="record-form mt-4" @if($errors->any()) open @endif><summary class="fw-semibold">+ Add item to cart</summary><form method="POST" action="{{ route('charges.store',$patient) }}" class="mt-3">@csrf<input type="hidden" name="request_key" value="{{ (string)\Illuminate\Support\Str::uuid() }}"><div class="row g-3">
+<div class="col-12"><label for="charge-description" class="form-label">Service / fee description</label><input list="common-fees" id="charge-description" name="description" class="form-control" required maxlength="255" value="{{ old('description') }}"></div>
+<div class="col-md-6"><label for="charge-date" class="form-label">Charge date</label><input id="charge-date" name="charged_on" type="date" class="form-control" required value="{{ old('charged_on',today()->toDateString()) }}" max="{{ today()->toDateString() }}"></div>
+<div class="col-md-6"><label for="charge-amount" class="form-label">Amount (PHP)</label><input id="charge-amount" type="number" name="amount" step=".01" min=".01" max="9999999.99" required class="form-control" value="{{ old('amount') }}"></div></div><button class="btn btn-primary mt-3">Add to cart</button></form></details>
+</div></div>
+
+<datalist id="common-fees"><option value="Consultation fee"></option><option value="Follow-up consultation fee"></option><option value="Vaccination fee"></option><option value="Medical certificate fee"></option><option value="Procedure fee"></option></datalist>
+<details class="mt-4"><summary class="fw-semibold">Billing history & corrections</summary>
+@forelse($records as $charge) @include('billing.charge', ['hidePaymentForm'=>true]) @empty<p class="text-muted py-3">No billing history.</p>@endforelse
+</details>

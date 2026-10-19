@@ -3,16 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\OnlineAppointment;
+use App\Models\Patient;
 
 class DashboardController extends Controller
 {
     public function index()
     {
+        $appointments = OnlineAppointment::whereDate('appointment_date', today())
+            ->orderBy('appointment_time')
+            ->get();
+
         return view('dashboard.index', [
-            'totalAppointments' => OnlineAppointment::count(),
-            'todayAppointments' => OnlineAppointment::whereDate('appointment_date', now()->toDateString())->count(),
+
+            'appointments' => $appointments,
+
+            'todayAppointments' => $appointments->count(),
+
             'pendingAppointments' => OnlineAppointment::where('status', 'Pending')->count(),
-            'approvedAppointments' => OnlineAppointment::where('status', 'Approved')->count(),
+
+            'registeredPatients' => Patient::count(),
+
         ]);
     }
 }

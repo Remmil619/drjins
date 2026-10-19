@@ -5,12 +5,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::table('online_appointments', fn (Blueprint $t) => $t->foreignId('patient_id')->nullable()->constrained()->restrictOnDelete());
         DB::table('patients')->whereNotNull('online_appointment_no')->orderBy('id')->each(function ($patient) {
-            DB::table('online_appointments')->where('appointment_no', $patient->online_appointment_no)->update(['patient_id' => $patient->id]);
+            DB::table('online_appointments')->where('appointment_no', $patient->online_appointment_no)->update([
+                'patient_id' => $patient->id,
+            ]);
         });
         Schema::create('queue_entries', function (Blueprint $t) {
             $t->id();
@@ -114,7 +117,9 @@ return new class extends Migration {
 
     public function down(): void
     {
-        foreach (['audit_logs', 'payments', 'charges', 'medical_alerts', 'immunizations', 'growth_records'] as $table) Schema::dropIfExists($table);
+        foreach (['audit_logs', 'payments', 'charges', 'medical_alerts', 'immunizations', 'growth_records'] as $table) {
+            Schema::dropIfExists($table);
+        }
         Schema::table('consultations', function (Blueprint $t) {
             $t->dropConstrainedForeignId('queue_entry_id');
             $t->dropColumn(['request_key', 'follow_up_closed_at', 'follow_up_outcome', 'voided_at', 'void_reason']);
@@ -123,4 +128,3 @@ return new class extends Migration {
         Schema::table('online_appointments', fn (Blueprint $t) => $t->dropConstrainedForeignId('patient_id'));
     }
 };
-

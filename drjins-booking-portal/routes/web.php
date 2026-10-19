@@ -5,9 +5,11 @@ use App\Http\Controllers\InquiryController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'pages.home')->name('home');
-foreach (['services', 'products', 'patient-hub', 'contact', 'about', 'privacy'] as $page) {
+foreach (['services', 'patient-hub', 'contact', 'about', 'privacy'] as $page) {
     Route::view('/'.$page, 'pages.'.$page)->name($page);
 }
+
+Route::redirect('/products', '/contact?topic=Product%20availability')->name('products');
 
 Route::post('/contact', [InquiryController::class, 'store'])->middleware('throttle:5,1')->name('contact.store');
 

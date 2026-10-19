@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasColumn('patients', 'online_appointment_no')) {
+        if (! Schema::hasColumn('patients', 'online_appointment_no')) {
             Schema::table('patients', function (Blueprint $table) {
                 $table->string('online_appointment_no')->nullable()->unique()->after('patient_no');
             });

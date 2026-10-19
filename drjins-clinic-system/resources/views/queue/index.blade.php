@@ -1,25 +1,139 @@
 @extends('layouts.app')
 @section('content')
-<section class="page-header"><div class="container"><span class="eyebrow">FRONT DESK</span><h1>Today's clinic queue</h1><p class="mb-0">Check in online bookings and walk-in patients, then open their care record.</p></div></section>
-<div class="container">@include('components.feedback')
-<div class="row g-4"><div class="col-lg-4"><div class="card clinic-card"><div class="card-body p-4"><h2 class="h5">Check in a patient</h2>
-<form method="GET" class="d-flex gap-2 mb-3"><label for="queue-search" class="visually-hidden">Find registered patient</label><input id="queue-search" class="form-control" name="search" value="{{ $search }}" placeholder="Name, patient no., or contact"><button class="btn btn-outline-primary">Find</button></form>
-<p class="small text-muted">Showing up to 50 matching active patients. <a href="{{ route('patients.create') }}">Register a new patient</a> if needed.</p>
-<form method="POST" action="{{ route('queue.store') }}">@csrf
-<label for="queue-patient" class="form-label">Patient</label><select id="queue-patient" name="patient_id" class="form-select mb-3" required><option value="">Select verified patient</option>@foreach($patients as $patient)<option value="{{ $patient->id }}" @selected(old('patient_id')==$patient->id)>{{ $patient->full_name }} · {{ $patient->patient_no }} · {{ $patient->birthdate }}</option>@endforeach</select>
-<label for="queue-booking" class="form-label">Online booking (optional)</label><select id="queue-booking" name="online_appointment_id" class="form-select mb-2"><option value="">Walk-in / no online booking</option>@foreach($appointments as $booking)<option value="{{ $booking->id }}" @selected(old('online_appointment_id')==$booking->id)>{{ $booking->appointment_time }} · {{ $booking->child_name }} · {{ $booking->appointment_no }}</option>@endforeach</select><p class="small text-muted">Confirm the child and guardian match before linking. Only approved bookings for today are listed.</p>
-<label for="queue-reason" class="form-label">Reason for visit</label><textarea id="queue-reason" name="reason" class="form-control mb-3" required maxlength="1000">{{ old('reason') }}</textarea><button class="btn btn-primary w-100">Check in for today</button></form>
-</div></div></div>
-<div class="col-lg-8"><div class="card clinic-card"><div class="card-body p-4"><div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><h2 class="h5">Visit list</h2><form method="GET" class="d-flex gap-2"><label for="queue-date" class="visually-hidden">Visit date</label><input id="queue-date" type="date" class="form-control" name="date" value="{{ $date }}"><button class="btn btn-outline-primary">View</button></form></div>
-<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Queue</th><th>Patient</th><th>Visit</th><th>Action</th></tr></thead><tbody>@forelse($entries as $entry)
-<tr><td>#{{ $entry->id }}<small class="d-block text-muted">{{ $entry->created_at->format('g:i A') }}</small></td><td><a class="fw-semibold" href="{{ route('patients.show',$entry->patient) }}">{{ $entry->patient->full_name }}</a><small class="d-block">{{ $entry->patient->patient_no }}</small><small class="d-block text-muted">{{ $entry->appointment?->appointment_no ?? 'Walk-in' }}</small></td><td><span class="badge text-bg-light">{{ str_replace('_',' ',$entry->status) }}</span><p class="small mb-0">{{ $entry->reason }}</p></td><td>
-@if($date===today()->toDateString())
-@foreach(match($entry->status){'waiting'=>['in_consultation'=>'Start consultation','left'=>'Mark left'],'in_consultation'=>['waiting'=>'Return to waiting','left'=>'Mark left'],'left'=>['waiting'=>'Reopen check-in'],default=>[]} as $status=>$label)
-<form method="POST" action="{{ route('queue.update',$entry) }}" class="mb-1">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $status }}"><button class="btn btn-sm btn-outline-primary">{{ $label }}</button></form>
-@endforeach
-@endif
-<a class="small" href="{{ route('patients.show',$entry->patient) }}">Open record &rarr;</a></td></tr>
-@empty<tr><td colspan="4" class="text-center py-5 text-muted">No patients checked in for this date.</td></tr>@endforelse</tbody></table></div>
-<p class="text-muted small mb-0">Queue changes stay inside the clinic. Saving a consultation completes the queue entry and updates a linked online booking.</p>
-</div></div></div></div></div>
+    <section class="page-header">
+        <div class="container">
+            <span class="eyebrow">FRONT DESK</span>
+            <h1>Today's clinic queue</h1>
+            <p>Search for a child, select their name to check in, then mark the visit Done when finished.</p>
+        </div>
+    </section>
+
+    <div class="container">
+        @include('components.feedback')
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card clinic-card"><div class="card-body p-4">
+                    <h2 class="h5">Check in a patient</h2>
+                    <label for="queue-search" class="form-label">Child's name</label>
+                    <input id="queue-search" name="search" type="search" class="form-control" autocomplete="off" placeholder="Type the child's name" aria-describedby="queue-search-help">
+                    <p id="queue-search-help" class="small text-muted mt-2">Select a result to add the child to today's queue. Online appointments must be booked for today.</p>
+                    <p id="queue-search-status" class="small" role="status" aria-live="polite"></p>
+                    <div id="queue-results" class="d-grid gap-2"></div>
+                    <a href="{{ route('patients.create') }}" class="btn btn-outline-primary mt-3">Register a new patient</a>
+                </div></div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card clinic-card"><div class="card-body p-4">
+                    <div class="d-flex justify-content-between flex-wrap gap-3 mb-3">
+                        <h2 class="h5">Active queue</h2>
+                        <form method="GET" class="d-flex gap-2">
+                            <label for="queue-date" class="visually-hidden">Visit date</label>
+                            <input id="queue-date" type="date" name="date" value="{{ $date }}" class="form-control">
+                            <button class="btn btn-outline-primary">View</button>
+                        </form>
+                    </div>
+                    <div class="table-responsive"><table class="table align-middle">
+                        <thead><tr><th>Queue</th><th>Child</th><th>Visit</th><th>Action</th></tr></thead>
+                        <tbody>
+                            @forelse($entries as $entry)
+                                <tr>
+                                    <td>#{{ $entry->id }}<small class="d-block text-muted">{{ $entry->created_at->format('g:i A') }}</small></td>
+                                    <td>
+                                        <strong>{{ $entry->patient?->full_name ?? $entry->appointment?->child_name }}</strong>
+                                        <small class="d-block text-muted">{{ $entry->appointment ? 'Online appointment' : 'Registered patient' }}</small>
+                                        @if($entry->patient)
+                                            <a class="small" href="{{ route('patients.show', $entry->patient) }}">Open record</a>
+                                        @endif
+                                    </td>
+                                    <td><span class="badge text-bg-light">{{ str_replace('_', ' ', $entry->status) }}</span><p class="small mb-0">{{ $entry->reason }}</p></td>
+                                    <td>
+                                        @if($date === today()->toDateString())
+                                            <form method="POST" action="{{ route('queue.done', $entry) }}">
+                                                @csrf
+                                                @if(!$entry->patient_id && !$entry->appointment?->child_date_of_birth)
+                                                    <label for="birthdate-{{ $entry->id }}" class="form-label">Birthdate</label>
+                                                    <input id="birthdate-{{ $entry->id }}" name="birthdate" type="date" max="{{ today()->toDateString() }}" class="form-control mb-2" required>
+                                                @endif
+                                                @if(!$entry->patient_id && !in_array($entry->appointment?->child_sex, ['Male', 'Female'], true))
+                                                    <label for="sex-{{ $entry->id }}" class="form-label">Sex</label>
+                                                    <select id="sex-{{ $entry->id }}" name="sex" class="form-select mb-2" required>
+                                                        <option value="">Select sex</option><option>Male</option><option>Female</option>
+                                                    </select>
+                                                @endif
+                                                <button class="btn btn-primary btn-sm">Done</button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="text-center text-muted py-5">No patients waiting for this date.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table></div>
+                    <p class="small text-muted">Done removes a visit from the active queue and saves the online patient in Patient Records. Completed visits are retained in the system.</p>
+                </div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const search = document.getElementById('queue-search');
+        const results = document.getElementById('queue-results');
+        const notice = document.getElementById('queue-search-status');
+        let timer;
+        let activeRequest;
+        let submitting = false;
+
+        search.addEventListener('input', () => {
+            clearTimeout(timer);
+            activeRequest?.abort();
+            results.replaceChildren();
+            notice.textContent = '';
+            const term = search.value.trim();
+            if (!term || submitting) return;
+            timer = setTimeout(async () => {
+                const controller = new AbortController();
+                activeRequest = controller;
+                notice.textContent = 'Searchingâ€¦';
+                try {
+                    const response = await fetch(@json(route('queue.search')) + '?search=' + encodeURIComponent(term), {
+                        signal: controller.signal, headers: {Accept: 'application/json'}
+                    });
+                    if (!response.ok) throw new Error('Search is unavailable. Please try again.');
+                    const data = await response.json();
+                    if (activeRequest !== controller || submitting) return;
+                    notice.textContent = data.results.length ? 'Select a child to add them to the queue.' : 'No eligible match. Register the child first if they have no patient record or online appointment.';
+                    data.results.forEach(item => {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = @json(route('queue.store'));
+                        const fields = {_token: @json(csrf_token())};
+                        if (item.patient_id) fields.patient_id = item.patient_id;
+                        if (item.online_appointment_id) fields.online_appointment_id = item.online_appointment_id;
+                        Object.entries(fields).forEach(([name, value]) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden'; input.name = name; input.value = value;
+                            form.append(input);
+                        });
+                        const button = document.createElement('button');
+                        button.className = 'btn btn-light w-100 text-start d-block';
+                        const name = document.createElement('strong');
+                        name.className = 'd-block'; name.textContent = item.name;
+                        const detail = document.createElement('small');
+                        detail.className = 'd-block text-muted'; detail.textContent = item.detail;
+                        button.append(name, detail); form.append(button);
+                        form.addEventListener('submit', event => {
+                            if (submitting) { event.preventDefault(); return; }
+                            submitting = true; activeRequest?.abort();
+                            results.querySelectorAll('button').forEach(b => b.disabled = true);
+                            notice.textContent = 'Adding patient to the queueâ€¦';
+                        });
+                        results.append(form);
+                    });
+                } catch (error) {
+                    if (error.name !== 'AbortError') notice.textContent = error.message;
+                }
+            }, 250);
+        });
+    </script>
 @endsection

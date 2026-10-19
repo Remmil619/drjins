@@ -19,13 +19,25 @@ class Patient extends Model
         'height',
         'weight',
         'temperature',
-        'address',
+        'address', 'barangay', 'municipality', 'province',
         'guardian_name',
         'guardian_relationship',
         'contact_number',
         'emergency_contact',
         'status',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Patient $patient) {
+            if ($patient->isDirty(['barangay', 'municipality', 'province'])) {
+                $parts = array_filter([$patient->barangay, $patient->municipality, $patient->province], fn ($value) => filled($value));
+                if ($parts) {
+                    $patient->address = implode(', ', $parts);
+                }
+            }
+        });
+    }
 
     protected $appends = [
         'full_name',
@@ -43,13 +55,21 @@ class Patient extends Model
 
     public function getAgeLabelAttribute(): string
     {
-        if (!$this->birthdate) return 'Not recorded';
-        $birth=Carbon::parse($this->birthdate);
-        $months=(int)$birth->diffInMonths(today());
-        if ($months < 1) return (int)$birth->diffInDays(today()).' days';
-        if ($months < 24) return $months.' months';
-        return (int)$birth->age.' years';
+        if (! $this->birthdate) {
+            return 'Not recorded';
+        }
+        $birth = Carbon::parse($this->birthdate);
+        $months = (int) $birth->diffInMonths(today());
+        if ($months < 1) {
+            return (int) $birth->diffInDays(today()).' days';
+        }
+        if ($months < 24) {
+            return $months.' months';
+        }
+
+        return (int) $birth->age.' years';
     }
+
     public function getAgeAttribute()
     {
         return $this->birthdate ? Carbon::parse($this->birthdate)->age : null;
@@ -69,4 +89,3 @@ class Patient extends Model
         );
     }
 }
-

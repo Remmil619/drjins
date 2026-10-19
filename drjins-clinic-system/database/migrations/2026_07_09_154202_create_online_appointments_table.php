@@ -23,7 +23,7 @@ return new class extends Migration
                 'Declined',
                 'Completed',
                 'Cancelled',
-                'Rescheduled'
+                'Rescheduled',
             ])->default('Pending');
             $table->text('staff_response')->nullable();
             $table->timestamp('responded_at')->nullable();

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prescription — {{ $patient->patient_no }}</title>
+    <style>
+        body {
+            font: 16px Arial, sans-serif;
+            color: #152c32;
+            margin: 40px auto;
+            max-width: 760px;
+            padding: 0 24px
+        }
+
+        header {
+            border-bottom: 2px solid #237c80;
+            padding-bottom: 18px
+        }
+
+        h1 {
+            margin: 0 0 8px
+        }
+
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 24px 0
+        }
+
+        .rx {
+            font-size: 34px
+        }
+
+        .prescription {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            line-height: 1.8;
+            min-height: 260px
+        }
+
+        .signature {
+            margin: 60px 0 20px;
+            text-align: right
+        }
+
+        button,
+        a {
+            padding: 10px;
+            margin-right: 12px
+        }
+
+        .actions {
+            margin-bottom: 24px
+        }
+
+        @page {
+            size: A4;
+            margin: 20mm
+        }
+
+        @media print {
+            .actions {
+                display: none
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                max-width: none
+            }
+
+            .signature {
+                break-inside: avoid
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="actions">
+        <button type="button" onclick="window.print()">Print prescription</button>
+        <a href="{{ route('patients.show', $patient) }}">Back to patient</a>
+    </div>
+    <header>
+        <h1>Dr. Jn's Clinic</h1>
+        <strong>Prescription</strong>
+    </header>
+    <div class="details">
+        <div>Patient: <strong>{{ $patient->full_name }}</strong>
+            <br>Patient no.:
+            {{ $patient->patient_no }}<br>Birthdate: {{ $patient->birthdate }}<br>Sex: {{ $patient->sex }}
+        </div>
+        <div>Date: {{ $consultation->visit_date }}<br>Guardian: {{ $patient->guardian_name }}<br>Address:
+            {{ $patient->address ?: 'Not recorded' }}</div>
+    </div>
+    <div class="rx">℞</div>
+    <div class="prescription">{{ $consultation->prescription }}</div>
+    <div class="signature">________________________________<br>Prescribing physician / signature<br>License no.:
+        ____________________<br>PTR no.: _______________________</div>
+</body>
+
+</html>

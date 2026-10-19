@@ -19,10 +19,12 @@ class AppointmentController extends Controller
     public function updateStatus(Request $request, Appointment $appointment)
     {
         $validated = $request->validate([
+
             'status' => [
                 'required',
                 'in:Pending,Approved,Declined,Completed,Cancelled,No Show,Rescheduled',
             ],
+
         ]);
 
         $appointment->update($validated);

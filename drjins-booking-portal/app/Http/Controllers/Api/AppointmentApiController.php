@@ -35,7 +35,7 @@ class AppointmentApiController extends Controller
         $this->authorizeRequest($request);
 
         $validated = $request->validate([
-            'status' => 'required|in:Pending,Approved,Declined,Completed,Cancelled,Rescheduled',
+            'status' => 'required|in:Pending,Approved,Declined,Completed,Cancelled,Rescheduled,No Show,In Queue',
             'staff_response' => 'nullable|string|max:1000',
         ]);
 
@@ -47,11 +47,11 @@ class AppointmentApiController extends Controller
                 if ($appointment->status === 'Completed' && $validated['status'] !== 'Completed') {
                     return response()->json(['message' => 'A completed visit cannot be reopened. Please create a new booking.'], 409);
                 }
-                if (! in_array($validated['status'], ['Cancelled', 'Declined'], true)
+                if (! in_array($validated['status'], ['Cancelled', 'Declined', 'No Show'], true)
                     && Appointment::whereDate('appointment_date', $appointment->appointment_date)
                         ->whereIn('appointment_time', [Carbon::parse($appointment->appointment_time)->format('H:i'), Carbon::parse($appointment->appointment_time)->format('H:i:s')])
                         ->where('id', '!=', $appointment->id)
-                        ->whereNotIn('status', ['Cancelled', 'Declined'])->exists()) {
+                        ->whereNotIn('status', ['Cancelled', 'Declined', 'No Show'])->exists()) {
                     return response()->json(['message' => 'This slot is already occupied by another appointment.'], 409);
                 }
                 $appointment->update([

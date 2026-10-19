@@ -1,9 +1,10 @@
 <nav class="navbar navbar-expand-xl clinic-navbar" aria-label="Main navigation">
     <div class="container">
         <a class="navbar-brand clinic-brand" href="{{ route('dashboard') }}">
-            <span class="brand-symbol" aria-hidden="true">+</span><span>Dr. Jn's<small>CHILDREN'S CLINIC</small></span>
+            <span class="brand-symbol" aria-hidden="true">+</span>
+            <span>Dr. Jn's<small>CHILDREN'S CLINIC</small>
+            </span>
         </a>
-
         <button
             class="navbar-toggler bg-light"
             type="button"
@@ -13,34 +14,43 @@
             aria-expanded="false"
             aria-label="Toggle navigation"
         >
-            <span class="navbar-toggler-icon"></span>
+            <span class="navbar-toggler-icon">
+            </span>
         </button>
-
         <div class="collapse navbar-collapse" id="navbarMenu">
             <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
                 <li class="nav-item">
-                    <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                    <a href="{{ route('dashboard') }}"
+                        class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                    >
                         Clinic Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('appointments.index') }}" class="nav-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}">
+                    <a href="{{ route('appointments.index') }}"
+                        class="nav-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}"
+                    >
                         Appointments
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('patients.index') }}" class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}">
+                    <a href="{{ route('patients.index') }}"
+                        class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}"
+                    >
                         Patients
                     </a>
                 </li>
-                <li class="nav-item"><a href="{{ route('queue.index') }}" class="nav-link {{ request()->routeIs('queue.*')?'active':'' }}">Queue</a></li>
-<li class="nav-item dropdown"><button type="button" class="nav-link dropdown-toggle {{ request()->routeIs('reminders.*','billing.*','reports.*','audit.*')?'active':'' }}" data-bs-toggle="dropdown" aria-expanded="false">Operations</button><ul class="dropdown-menu">
-<li><a class="dropdown-item" href="{{ route('reminders.index') }}">Follow-ups & vaccines</a></li>
-<li><a class="dropdown-item" href="{{ route('billing.index') }}">Billing & payments</a></li>
-<li><a class="dropdown-item" href="{{ route('reports.index') }}">Reports</a></li>
-<li><a class="dropdown-item" href="{{ route('audit.index') }}">Activity log</a></li>
-</ul></li>
-<li class="nav-item dropdown ms-lg-2">
+                <li class="nav-item">
+                    <a href="{{ route('queue.index') }}"
+                        class="nav-link {{ request()->routeIs('queue.*') ? 'active' : '' }}"
+                    >Queue</a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('inquiries.index') }}"
+                        class="nav-link {{ request()->routeIs('inquiries.*') ? 'active' : '' }}"
+                    >Inquiries</a>
+                </li>
+                <li class="nav-item dropdown ms-lg-2">
                     <button
                         class="btn account-menu-button dropdown-toggle"
                         type="button"
@@ -56,13 +66,13 @@
                             <span class="account-role">Authorized Staff</span>
                         </span>
                     </button>
-
                     <div class="dropdown-menu dropdown-menu-end account-dropdown">
                         <div class="account-dropdown-header">
                             <div class="fw-semibold">Signed in as</div>
                             <div class="small text-muted account-email">{{ auth()->user()->email }}</div>
                         </div>
-                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-divider">
+                        </div>
                         <button
                             type="button"
                             class="logout-button"
@@ -77,7 +87,6 @@
         </div>
     </div>
 </nav>
-
 <div
     class="modal fade"
     id="logoutConfirmationModal"
@@ -90,20 +99,33 @@
         <div class="modal-content logout-confirmation-card">
             <div class="modal-body text-center">
                 <div class="logout-confirmation-icon" aria-hidden="true">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                        <path d="M10 17l5-5-5-5M15 12H3M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                    >
+                        <path
+                            d="M10 17l5-5-5-5M15 12H3M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
                     </svg>
                 </div>
-
                 <h2 class="logout-confirmation-title" id="logoutConfirmationTitle">
                     Confirm logout
                 </h2>
                 <p class="logout-confirmation-message" id="logoutConfirmationMessage">
                     Are you sure you want to sign out of your clinic account?
                 </p>
-
                 <div class="logout-confirmation-actions">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        data-bs-dismiss="modal"
+                    >
                         Cancel
                     </button>
 
@@ -118,5 +140,3 @@
         </div>
     </div>
 </div>
-
-

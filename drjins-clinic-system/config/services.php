@@ -36,7 +36,7 @@ return [
     ],
 
     'booking_api' => [
-    'url' => env('BOOKING_API_URL'),
-    'token' => env('BOOKING_API_TOKEN'),
+        'url' => env('BOOKING_API_URL'),
+        'token' => env('BOOKING_API_TOKEN'),
     ],
 ];

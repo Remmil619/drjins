@@ -24,7 +24,8 @@ class ClinicWebsiteTest extends TestCase
     {
         return array_replace([
             'guardian_first_name' => 'Test', 'guardian_surname' => 'Guardian', 'child_first_name' => 'Test', 'child_surname' => 'Child',
-            'guardian_relationship' => 'Mother', 'guardian_address' => 'Abuyog, Leyte',
+            'guardian_relationship' => 'Mother',
+            'guardian_barangay' => 'Bito', 'guardian_municipality' => 'Abuyog', 'guardian_province' => 'Leyte',
             'child_date_of_birth' => '2020-01-15', 'child_sex' => 'Female',
             'contact_number' => '09123456789', 'appointment_date' => '2026-09-24',
             'appointment_time' => '08:00', 'reason_for_visit' => 'Child checkup', 'consent' => '1',
@@ -33,18 +34,20 @@ class ClinicWebsiteTest extends TestCase
 
     public function test_public_pages_and_navigation_are_available(): void
     {
-        foreach (['/', '/services', '/products', '/patient-hub', '/about', '/contact', '/privacy', '/book-appointment', '/check-status'] as $path) {
+        foreach (['/', '/services', '/patient-hub', '/about', '/contact', '/privacy', '/book-appointment', '/check-status'] as $path) {
             $this->get($path)->assertOk()->assertSee('Book Now')->assertSee('Privacy notice');
         }
         $this->get('/')->assertSee('clinic-care.svg')->assertDontSee('name="guardian_name"', false);
+        $this->get('/products')->assertRedirect('/contact?topic=Product%20availability');
     }
 
     public function test_booking_confirmation_and_duplicate_slot_protection(): void
     {
         $response = $this->post('/book-appointment', $this->booking());
         $appointment = Appointment::firstOrFail();
+        $this->assertSame('BITO, ABUYOG, LEYTE', $appointment->guardian_address);
         $response->assertRedirect(route('booking.success', $appointment->appointment_no))->assertSessionHas('booking_success');
-        $this->get($response->headers->get('Location'))->assertOk()->assertSee('Appointment Booked')->assertSee('Test Child');
+        $this->get($response->headers->get('Location'))->assertOk()->assertSee('Appointment Booked')->assertSee('TEST CHILD');
         $this->post('/book-appointment', $this->booking())->assertSessionHasErrors('appointment_time');
         $this->assertDatabaseCount('appointments', 1);
     }
@@ -66,8 +69,8 @@ class ClinicWebsiteTest extends TestCase
         ]))->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('appointments', [
-            'guardian_name' => 'Test Maria Guardian',
-            'child_name' => 'Test Santos Child',
+            'guardian_name' => 'TEST MARIA GUARDIAN',
+            'child_name' => 'TEST SANTOS CHILD',
             'emergency_contact_name' => null,
         ]);
     }
@@ -90,9 +93,26 @@ class ClinicWebsiteTest extends TestCase
         $appointment = Appointment::firstOrFail();
         $this->flushSession();
         $this->get(route('booking.success', $appointment->appointment_no))->assertRedirect();
-        $this->get('/check-status?appointment_no='.$appointment->appointment_no)->assertDontSee('Test Child');
-        $this->post('/check-status', ['appointment_no' => $appointment->appointment_no, 'contact_number' => '09999999999'])->assertOk()->assertDontSee('Test Child')->assertSee('No matching appointment');
-        $this->post('/check-status', ['appointment_no' => $appointment->appointment_no, 'contact_number' => '+639123456789'])->assertOk()->assertSee('Test Child')->assertSee('Booked');
+        $this->get('/check-status?appointment_no='.$appointment->appointment_no)->assertDontSee('TEST CHILD');
+        $this->post('/check-status', ['child_name' => $appointment->child_name, 'contact_number' => '09999999999'])->assertOk()->assertViewHas('appointments', fn ($rows) => $rows->isEmpty())->assertSee('No matching appointment');
+        $this->post('/check-status', ['child_name' => $appointment->child_name, 'contact_number' => '+639123456789'])->assertOk()->assertSee('TEST CHILD')->assertSee('Booked');
+    }
+
+    public function test_name_lookup_lists_repeat_visits_and_requires_matching_name_and_mobile(): void
+    {
+        $this->post('/book-appointment', $this->booking());
+        $first = Appointment::firstOrFail();
+        $second = $first->replicate();
+        $second->appointment_no = 'APT-SECOND';
+        $second->appointment_time = '09:00';
+        $second->save();
+        $response = $this->post('/check-status', ['child_name' => '  test   child  ', 'contact_number' => '09123456789']);
+        $response->assertOk()->assertViewHas('appointments', fn ($rows) => $rows->count() === 2)
+            ->assertDontSee($first->appointment_no)->assertDontSee('APT-SECOND');
+        $this->post('/check-status', ['child_name' => 'Different Child', 'contact_number' => '09123456789'])
+            ->assertOk()->assertViewHas('appointments', fn ($rows) => $rows->isEmpty());
+        $this->post('/check-status', ['child_name' => 'Test Child', 'contact_number' => '09999999999'])
+            ->assertOk()->assertViewHas('appointments', fn ($rows) => $rows->isEmpty());
     }
 
     public function test_inquiries_are_validated_and_saved_with_reference(): void
@@ -100,7 +120,7 @@ class ClinicWebsiteTest extends TestCase
         $this->post('/contact', [])->assertSessionHasErrors(['name', 'message', 'consent']);
         $this->post('/contact', ['name' => 'Test Parent', 'contact_number' => '09123456789', 'topic' => 'Product availability', 'message' => 'Please confirm product availability.', 'consent' => '1'])
             ->assertRedirect(route('contact'))->assertSessionHas('inquiry_reference');
-        $this->assertDatabaseHas('inquiries', ['name' => 'Test Parent', 'topic' => 'Product availability']);
+        $this->assertDatabaseHas('inquiries', ['name' => 'TEST PARENT', 'topic' => 'Product availability']);
     }
 
     public function test_clinic_api_requires_a_configured_matching_token(): void
@@ -133,7 +153,7 @@ class ClinicWebsiteTest extends TestCase
         ], $headers)->assertOk()->assertJsonPath('appointment.status', 'Cancelled');
 
         $this->post('/check-status', [
-            'appointment_no' => $appointment->appointment_no, 'contact_number' => '09123456789',
+            'child_name' => $appointment->child_name, 'contact_number' => '09123456789',
         ])->assertOk()->assertSee('Cancelled')->assertSee('Cancelled at guardian request.');
 
         // A cancelled booking releases its slot for another family.
@@ -144,11 +164,11 @@ class ClinicWebsiteTest extends TestCase
     public function test_missing_patient_intake_details_return_actionable_errors(): void
     {
         $this->from('/book-appointment')->post('/book-appointment', $this->booking([
-            'guardian_relationship' => '', 'guardian_address' => '',
+            'guardian_relationship' => '', 'guardian_barangay' => '', 'guardian_municipality' => '', 'guardian_province' => '',
             'child_date_of_birth' => '', 'child_sex' => '',
         ]))->assertRedirect('/book-appointment')->assertSessionHasErrors([
-            'guardian_relationship', 'guardian_address', 'child_date_of_birth', 'child_sex',
-        ])->assertSessionHasInput('child_first_name', 'Test');
+            'guardian_relationship', 'guardian_barangay', 'guardian_municipality', 'guardian_province', 'child_date_of_birth', 'child_sex',
+        ])->assertSessionHasInput('child_first_name', 'TEST');
         $this->assertDatabaseCount('appointments', 0);
     }
 
@@ -178,7 +198,7 @@ class ClinicWebsiteTest extends TestCase
             ->with('appointment-2026-09-24-08:00', 15)->once()->andReturn($lock);
         $this->from('/book-appointment')->post('/book-appointment', $this->booking())
             ->assertRedirect('/book-appointment')->assertSessionHasErrors('appointment_time')
-            ->assertSessionHasInput('child_first_name', 'Test');
+            ->assertSessionHasInput('child_first_name', 'TEST');
         $this->assertDatabaseCount('appointments', 0);
     }
 
