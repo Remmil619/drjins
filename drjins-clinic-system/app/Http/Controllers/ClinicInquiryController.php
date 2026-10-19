@@ -4,9 +4,34 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 
 class ClinicInquiryController extends Controller
 {
+    public function reply(Request $request, string $reference)
+    {
+        $data = $request->validate(['reply' => 'required|string|min:1|max:2000']);
+        $url = config('services.booking_api.url');
+        $token = config('services.booking_api.token');
+        if (! $url || ! $token) {
+            throw ValidationException::withMessages(['reply' => 'The booking portal connection is not configured.']);
+        }
+
+        try {
+            $response = Http::acceptJson()->connectTimeout(3)->timeout(10)
+                ->withHeaders(['X-Booking-Token' => $token])
+                ->post(rtrim($url, '/').'/inquiries/'.rawurlencode($reference).'/replies', $data);
+            if (! $response->successful()) {
+                throw ValidationException::withMessages(['reply' => 'The reply could not be delivered. Please try again.']);
+            }
+        } catch (\Illuminate\Http\Client\ConnectionException $exception) {
+            throw ValidationException::withMessages(['reply' => 'The booking portal is unavailable. Please try again.']);
+        }
+
+        return redirect()->route('inquiries.index', ['page' => $request->input('page', 1)])
+            ->with('success', 'Reply sent to the booking portal.');
+    }
+
     public function index(Request $request)
     {
         $page = max(1, (int) $request->query('page', 1));

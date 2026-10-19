@@ -116,3 +116,4 @@ Route::middleware(['auth', PreventBackHistory::class])->group(function () {
 
 Route::post('/patients/{patient}/checkout', [BillingController::class, 'checkout'])->middleware(['auth', PreventBackHistory::class])->name('billing.checkout');
 Route::get('/inquiries', [ClinicInquiryController::class, 'index'])->middleware(['auth', PreventBackHistory::class])->name('inquiries.index');
+Route::post('/inquiries/{reference}/reply', [ClinicInquiryController::class, 'reply'])->middleware(['auth', PreventBackHistory::class])->name('inquiries.reply');

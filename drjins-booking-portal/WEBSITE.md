@@ -1,8 +1,8 @@
 # Clinic website
 
-Run `php artisan serve --host=127.0.0.1 --port=8001`. The home page is `/`; the booking form is `/book-appointment`. The clinic-system API remains under `/api/appointments`.
+Run `php artisan serve --host=127.0.0.1 --port=8001`. The home page is `/`; the booking form is `/book-appointment`. Booking and inquiry APIs are under `/api`.
 
-Keep this server running while using the clinic system. Its `BOOKING_API_URL` must point to `http://127.0.0.1:8001/api` for local use, and both apps must have the same nonempty `BOOKING_API_TOKEN`. Running the portal on another port will leave the clinic unable to sync. In a separate terminal in `../drjins-clinic-system`, run `php artisan bookings:sync` to verify the connection. The clinic appointment page also syncs bookings when opened and refreshed. Choose the Upcoming or All filter for future appointments; the default Today filter excludes them.
+Keep this server running while using the clinic system. In the clinic app, `BOOKING_API_URL` must point to `http://127.0.0.1:8001/api`; both apps must have the same nonempty `BOOKING_API_TOKEN`. In this portal, `BOOKING_API_URL` points in the opposite direction to the clinic app API (for local use, `http://127.0.0.1:8000/api`, adjusted to the actual clinic app port). In a separate terminal in `../drjins-clinic-system`, run `php artisan bookings:sync` to verify the booking connection. The clinic appointment page also syncs bookings when opened and refreshed. Choose the Upcoming or All filter for future appointments; the default Today filter excludes them.
 
 Booking requires the guardian's name, relationship, address and mobile number, the child's name, birth date and sex, an available date and time, and consent. Validation errors preserve the entered details. The confirmation button explains missing details or schedule selection, shows submission progress, and redirects to a success notification after saving.
 
@@ -26,14 +26,14 @@ Successful bookings retain the existing Approved status. Confirmation details ar
 
 ## Contact inquiries
 
-Run `php artisan migrate` to create the inquiries table. The contact form validates and stores inquiries, returns an inquiry reference, and does not send email or SMS. To view inquiries on the server:
+Run `php artisan migrate` to create the inquiries and reply tables. Set `BOOKING_API_URL` to the clinic system API base URL and use the same nonempty `BOOKING_API_TOKEN` in both apps. The contact form stores inquiries and their opening messages in this portal database. The clinic dashboard reads these through its token-protected API; staff replies are saved here and displayed in the parent status lookup.
 
 ```powershell
 php artisan clinic:inquiries
 php artisan clinic:inquiries --limit=50
 ```
 
-Inquiries are not yet displayed inside the separate clinic-system dashboard. The website tells visitors to call for prompt follow-up.
+Parents can continue an inquiry from Check appointment status using the mobile number they provided. An inquiry reference is required for replies. Staff replies appear in the thread. Parents should use the contact number from the inquiry.
 
 ## Verification
 

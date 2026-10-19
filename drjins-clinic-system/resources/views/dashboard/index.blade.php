@@ -13,7 +13,7 @@
     </section>
     <div class="container">
         <div class="row g-3 mb-4">
-            @foreach ([["Today's appointments", $todayAppointments], ['Pending review', $pendingAppointments], ['Registered patients', $registeredPatients]] as [$label, $value])
+            @foreach ([["Today's appointments", $todayAppointments], ['Patients in queue', $patientsInQueue], ['Registered patients', $registeredPatients]] as [$label, $value])
                 <div class="col-12 col-sm-4">
                     <div class="card clinic-card metric-card h-100">
                         <div class="card-body p-4">

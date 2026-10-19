@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OnlineAppointment;
 use App\Models\Patient;
+use App\Models\QueueEntry;
 
 class DashboardController extends Controller
 {
@@ -19,7 +20,8 @@ class DashboardController extends Controller
 
             'todayAppointments' => $appointments->count(),
 
-            'pendingAppointments' => OnlineAppointment::where('status', 'Pending')->count(),
+            'patientsInQueue' => QueueEntry::whereDate('visit_date', today())
+                ->whereIn('status', ['waiting', 'in_consultation'])->count(),
 
             'registeredPatients' => Patient::count(),
 

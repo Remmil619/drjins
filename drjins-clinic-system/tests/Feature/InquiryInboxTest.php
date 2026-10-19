@@ -36,6 +36,7 @@ class InquiryInboxTest extends TestCase
                     'topic' => 'General inquiry',
                     'message' => '<script>alert(1)</script>',
                     'created_at' => '2026-10-19 10:00:00',
+                    'replies' => [['sender' => 'staff', 'message' => 'We can help.', 'created_at' => '2026-10-19 10:30:00']],
 
                 ]],
                 'last_page' => 2,
@@ -49,5 +50,21 @@ class InquiryInboxTest extends TestCase
             '*' => Http::response([], 503),
         ]);
         $this->get('/inquiries')->assertOk()->assertSee('Unable to load inquiries')->assertDontSee('No inquiries found.');
+    }
+
+    public function test_staff_can_send_a_reply_to_the_portal_inquiry(): void
+    {
+        $this->actingAs(User::factory()->create());
+        config(['services.booking_api.url' => 'http://portal.test/api', 'services.booking_api.token' => 'test']);
+        Http::preventStrayRequests();
+        Http::fake(['*' => Http::response(['message' => 'Reply saved.'])]);
+
+        $this->post(route('inquiries.reply', 'INQ-TEST'), ['reply' => 'We can help.', 'page' => 2])
+            ->assertRedirect(route('inquiries.index', ['page' => 2]))
+            ->assertSessionHas('success', 'Reply sent to the booking portal.');
+        Http::assertSent(fn ($request) => $request->method() === 'POST'
+            && str_ends_with($request->url(), '/inquiries/INQ-TEST/replies')
+            && $request->hasHeader('X-Booking-Token', 'test')
+            && $request['reply'] === 'We can help.');
     }
 }

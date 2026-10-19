@@ -405,3 +405,21 @@ footer {
     .inquiry-message { padding: 16px; }
     .inquiry-footer .btn { min-height: 40px; }
 }
+
+.inquiry-phone { display:inline-flex; align-items:center; gap:7px; padding:0; border:0; background:transparent; color:#58727d; font:inherit; font-size:13px; text-align:left; }
+.inquiry-phone:hover, .inquiry-phone:focus-visible { color:#087f76; text-decoration:underline; }
+.inquiry-phone-hint { color:#147d78; font-size:11px; }
+.call-card-backdrop { position:fixed; inset:0; z-index:2000; display:grid; place-items:center; padding:20px; background:rgba(18,37,39,.52); backdrop-filter:blur(4px); animation:call-card-fade .2s ease both; }
+.call-card-backdrop[hidden] { display:none; }
+.call-card { position:relative; width:min(100%, 430px); padding:30px; border:1px solid #dce9e5; border-radius:24px; background:linear-gradient(155deg,#fff 0%,#f1f8f3 100%); box-shadow:0 24px 70px rgba(0,0,0,.24); text-align:center; animation:call-card-pop .32s cubic-bezier(.2,.8,.2,1) both; }
+.call-card .eyebrow { display:block; margin:0 30px 18px; color:#147d78; font-size:10px; font-weight:800; letter-spacing:.15em; }
+.call-card-icon { display:grid; place-items:center; width:76px; height:76px; margin:0 auto 18px; border-radius:50%; background:#e4f3ef; color:#087f76; font-size:34px; animation:call-card-ring 1.5s ease-in-out infinite; }
+.call-card h2 { margin:0 0 6px; color:#183f42; font-weight:750; }
+.call-card-number { display:inline-block; color:#087f76; font-size:21px; font-weight:750; text-decoration:none; }
+.call-card-number:hover { text-decoration:underline; }
+.call-card-close { position:absolute; top:12px; right:14px; width:36px; height:36px; border:0; border-radius:50%; background:transparent; color:#647a7d; font-size:28px; line-height:1; }
+.call-card-close:hover { background:#e4f3ef; color:#087f76; }
+@keyframes call-card-fade { from { opacity:0; } to { opacity:1; } }
+@keyframes call-card-pop { from { opacity:0; transform:translateY(16px) scale(.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes call-card-ring { 0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(8,127,118,.18); } 50% { transform:scale(1.06); box-shadow:0 0 0 12px rgba(8,127,118,0); } }
+@media (prefers-reduced-motion:reduce) { .call-card-backdrop,.call-card,.call-card-icon { animation:none; } }

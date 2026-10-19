@@ -12,12 +12,13 @@
     </section>
 
     <div class="container inquiry-inbox">
+        @include('components.feedback')
         @if ($error)
             <div class="alert alert-warning" role="alert">{{ $error }}</div>
         @else
             <div class="inquiry-toolbar">
                 <h2 class="h6 mb-0">Inbox <span class="inquiry-count">{{ count($inquiries) }}</span></h2>
-                <p class="small text-muted mb-0">Contact the sender by phone to respond.</p>
+                <p class="small text-muted mb-0">Tap a mobile number to call the sender.</p>
             </div>
             @forelse($inquiries as $inquiry)
                 @php
@@ -38,7 +39,11 @@
                                 <span class="inquiry-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($inquiry['name'], 0, 1)) }}</span>
                                 <div>
                                     <h3 class="inquiry-name">{{ $inquiry['name'] }}</h3>
-                                    <span class="small text-muted">{{ $inquiry['contact_number'] }}</span>
+                                    @if ($phone)
+                                        <button type="button" class="inquiry-phone" data-phone="{{ $phone }}" data-name="{{ $inquiry['name'] }}" aria-label="Show call card for {{ $inquiry['name'] }} at {{ $inquiry['contact_number'] }}"><span class="inquiry-phone-number">{{ $inquiry['contact_number'] }}</span><span class="inquiry-phone-hint" aria-hidden="true">View</span></button>
+                                    @else
+                                        <span class="small text-muted">{{ $inquiry['contact_number'] }}</span>
+                                    @endif
                                 </div>
                             </div>
                             <span class="inquiry-date">
@@ -53,9 +58,6 @@
 
                         <div class="inquiry-footer">
                             <span class="small text-muted">{{ $inquiry['reference'] }}</span>
-                            @if ($phone)
-                                <a class="btn btn-primary btn-sm" href="tel:{{ $phone }}" aria-label="Call {{ $inquiry['name'] }}">Call sender</a>
-                            @endif
                         </div>
                     </div>
                 </article>
@@ -78,4 +80,45 @@
             </nav>
         @endif
     </div>
+    <div class="call-card-backdrop" id="call-card" hidden aria-hidden="true">
+        <section class="call-card" role="dialog" aria-modal="true" aria-labelledby="call-card-title">
+            <button type="button" class="call-card-close" aria-label="Close">&times;</button>
+            <span class="eyebrow">PATIENT COMMUNICATION</span>
+            <div class="call-card-icon" aria-hidden="true">&#9742;</div>
+            <p class="mb-1">Call sender</p>
+            <h2 id="call-card-title" class="h4"></h2>
+            <a class="call-card-number" id="call-card-number" href="#"></a>
+            <p class="small text-muted mt-3 mb-4">Continue to your device's phone app to place the call.</p>
+            <button type="button" class="btn btn-outline-primary w-100 mt-2 call-card-cancel">Cancel</button>
+        </section>
+    </div>
+    <script>
+        (() => {
+            const modal = document.getElementById('call-card');
+            const title = document.getElementById('call-card-title');
+            const number = document.getElementById('call-card-number');
+            let lastTrigger;
+
+            const close = () => {
+                modal.hidden = true;
+                modal.setAttribute('aria-hidden', 'true');
+                lastTrigger?.focus();
+            };
+
+            document.querySelectorAll('.inquiry-phone').forEach(button => button.addEventListener('click', () => {
+                lastTrigger = button;
+                const phone = button.dataset.phone;
+                title.textContent = button.dataset.name;
+                number.textContent = phone;
+                number.href = `tel:${phone}`;
+                modal.hidden = false;
+                modal.setAttribute('aria-hidden', 'false');
+                modal.querySelector('.call-card-close').focus();
+            }));
+
+            modal.querySelectorAll('.call-card-close, .call-card-cancel').forEach(button => button.addEventListener('click', close));
+            modal.addEventListener('click', event => { if (event.target === modal) close(); });
+            document.addEventListener('keydown', event => { if (event.key === 'Escape' && !modal.hidden) close(); });
+        })();
+    </script>
 @endsection

@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class BookingController extends Controller
@@ -116,18 +117,33 @@ class BookingController extends Controller
     public function status(Request $request)
     {
         $appointments = collect();
-
+        $inquiries = collect();
+        $lookup = $request->session()->pull('status_lookup', []);
         if ($request->isMethod('post')) {
-            $data = $request->validate([
+            $lookup = $request->validate([
                 'child_name' => 'required|string|max:255',
                 'contact_number' => ['required', 'regex:/^(09\d{9}|\+639\d{9})$/'],
             ]);
-            $localNumber = preg_replace('/^\+63/', '0', $data['contact_number']);
-            $appointments = Appointment::whereRaw('LOWER(child_name) = ?', [mb_strtolower(preg_replace('/\\s+/u', ' ', trim($data['child_name'])))])
-                ->whereIn('contact_number', [$localNumber, '+63'.substr($localNumber, 1)])->orderByDesc('appointment_date')->orderByDesc('appointment_time')->get();
         }
 
-        return view('booking.status', compact('appointments'));
+        if (is_array($lookup) && isset($lookup['child_name'], $lookup['contact_number'])) {
+            $localNumber = preg_replace('/^\+63/', '0', $lookup['contact_number']);
+            $appointments = Appointment::whereRaw('LOWER(child_name) = ?', [mb_strtolower(preg_replace('/\\s+/u', ' ', trim($lookup['child_name'])))])
+                ->whereIn('contact_number', [$localNumber, '+63'.substr($localNumber, 1)])->orderByDesc('appointment_date')->orderByDesc('appointment_time')->get();
+            $appointments->each(function ($appointment) {
+                $appointment->setRelation('inquiryReplies', collect());
+            });
+            $inquiries = \Illuminate\Support\Facades\DB::table('inquiries')
+                ->where(function ($query) use ($localNumber) {
+                    $query->where('contact_number', $localNumber)->orWhere('contact_number', '+63'.substr($localNumber, 1));
+                })->get();
+            foreach ($inquiries as $inquiry) {
+                $inquiry->replies = \Illuminate\Support\Facades\DB::table('inquiry_replies')
+                    ->where('inquiry_reference', $inquiry->reference)->orderBy('id')->get();
+            }
+        }
+
+        return view('booking.status', compact('appointments', 'inquiries', 'lookup'));
     }
 
     private function clinicSchedule()

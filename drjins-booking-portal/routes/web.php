@@ -12,6 +12,7 @@ foreach (['services', 'patient-hub', 'contact', 'about', 'privacy'] as $page) {
 Route::redirect('/products', '/contact?topic=Product%20availability')->name('products');
 
 Route::post('/contact', [InquiryController::class, 'store'])->middleware('throttle:5,1')->name('contact.store');
+Route::post('/contact/reply', [InquiryController::class, 'reply'])->middleware('throttle:10,1')->name('contact.reply');
 
 Route::get('/book-appointment', [BookingController::class, 'create'])
     ->name('booking.create');
