@@ -50,6 +50,18 @@
                         class="nav-link {{ request()->routeIs('inquiries.*') ? 'active' : '' }}"
                     >Inquiries</a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ route('sales.index') }}"
+                        class="nav-link {{ request()->routeIs('sales.*') ? 'active' : '' }}"
+                    >Sales</a>
+                </li>
+                @can('register-users')
+                    <li class="nav-item">
+                        <a href="{{ route('users.create') }}"
+                            class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
+                        >Register User</a>
+                    </li>
+                @endcan
                 <li class="nav-item dropdown ms-lg-2">
                     <button
                         class="btn account-menu-button dropdown-toggle"
@@ -63,7 +75,7 @@
                         </span>
                         <span class="account-details">
                             <span class="account-name">{{ auth()->user()->name }}</span>
-                            <span class="account-role">Authorized Staff</span>
+                            <span class="account-role">{{ match (auth()->user()->role) { 'admin' => 'Administrator', 'doctor' => 'Doctor', default => 'Authorized Staff' } }}</span>
                         </span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end account-dropdown">

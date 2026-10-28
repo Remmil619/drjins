@@ -4,7 +4,7 @@
         <div class="container">
             <span class="eyebrow">FRONT DESK</span>
             <h1>Today's clinic queue</h1>
-            <p>Search for a child, select their name to check in, then mark the visit Done when finished.</p>
+            <p>Check in a child here. The doctor starts the check-up, then completes the visit when finished.</p>
         </div>
     </section>
 
@@ -23,33 +23,25 @@
                 </div></div>
             </div>
             <div class="col-lg-8">
-                <div class="card clinic-card"><div class="card-body p-4">
-                    <div class="d-flex justify-content-between flex-wrap gap-3 mb-3">
-                        <h2 class="h5">Active queue</h2>
-                        <form method="GET" class="d-flex gap-2">
-                            <label for="queue-date" class="visually-hidden">Visit date</label>
-                            <input id="queue-date" type="date" name="date" value="{{ $date }}" class="form-control">
-                            <button class="btn btn-outline-primary">View</button>
-                        </form>
-                    </div>
                     <div class="table-responsive"><table class="table align-middle">
                         <thead><tr><th>Queue</th><th>Child</th><th>Visit</th><th>Action</th></tr></thead>
                         <tbody>
                             @forelse($entries as $entry)
-                                <tr>
-                                    <td>#{{ $entry->id }}<small class="d-block text-muted">{{ $entry->created_at->format('g:i A') }}</small></td>
+                                <tr data-queue-id="{{ $entry->id }}">
+                                    <td>#{{ $entry->daily_number }}<small class="d-block text-muted">{{ $entry->created_at->format('g:i A') }}</small></td>
                                     <td>
                                         <strong>{{ $entry->patient?->full_name ?? $entry->appointment?->child_name }}</strong>
                                         <small class="d-block text-muted">{{ $entry->appointment ? 'Online appointment' : 'Registered patient' }}</small>
-                                        @if($entry->patient)
-                                            <a class="small" href="{{ route('patients.show', $entry->patient) }}">Open record</a>
-                                        @endif
+
                                     </td>
-                                    <td><span class="badge text-bg-light">{{ str_replace('_', ' ', $entry->status) }}</span><p class="small mb-0">{{ $entry->reason }}</p></td>
+                                    <td><span class="badge text-bg-light" data-queue-status>{{ $entry->status === 'in_consultation' ? 'In check up' : 'Waiting' }}</span><p class="small mb-0">{{ $entry->reason }}</p></td>
                                     <td>
-                                        @if($date === today()->toDateString())
-                                            <form method="POST" action="{{ route('queue.done', $entry) }}">
-                                                @csrf
+                                        @if($date === today()->toDateString() && in_array(auth()->user()->role, ['doctor', 'admin'], true))
+                                            @if(in_array($entry->status, ['waiting', 'in_consultation'], true))
+                                                <form method="POST" action="{{ route('queue.update', $entry) }}" data-start-checkup>
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="status" value="in_consultation">
                                                 @if(!$entry->patient_id && !$entry->appointment?->child_date_of_birth)
                                                     <label for="birthdate-{{ $entry->id }}" class="form-label">Birthdate</label>
                                                     <input id="birthdate-{{ $entry->id }}" name="birthdate" type="date" max="{{ today()->toDateString() }}" class="form-control mb-2" required>
@@ -60,8 +52,10 @@
                                                         <option value="">Select sex</option><option>Male</option><option>Female</option>
                                                     </select>
                                                 @endif
-                                                <button class="btn btn-primary btn-sm">Done</button>
-                                            </form>
+                                                    <button class="btn btn-primary btn-sm">{{ $entry->status === 'waiting' ? 'Start check-up' : 'Continue check-up' }}</button>
+                                                </form>
+                                            @endif
+
                                         @endif
                                     </td>
                                 </tr>
@@ -70,8 +64,7 @@
                             @endforelse
                         </tbody>
                     </table></div>
-                    <p class="small text-muted">Done removes a visit from the active queue and saves the online patient in Patient Records. Completed visits are retained in the system.</p>
-                </div></div>
+                    <p class="small text-muted">Queue numbers restart at 1 each day. Start check-up opens the patient record and shows In check up to staff. Online patients are registered when the check-up starts. Complete the visit from the patient record when the check-up is finished.</p>
             </div>
         </div>
     </div>
@@ -83,6 +76,28 @@
         let timer;
         let activeRequest;
         let submitting = false;
+
+        // Update the shared status without interrupting patient searches or forms.
+        async function refreshQueueStatus() {
+            try {
+                if (!document.hidden) {
+                    const response = await fetch(@json(route('queue.index', ['date' => $date])), {
+                        headers: {Accept: 'application/json'}
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        document.querySelectorAll('[data-queue-id]').forEach(row => {
+                            const entry = data.entries.find(item => String(item.id) === row.dataset.queueId);
+                            if (!entry) { row.remove(); return; }
+                            row.querySelector('[data-queue-status]').textContent = entry.status === 'in_consultation' ? 'In check up' : 'Waiting';
+                            if (entry.status !== 'waiting') { const button = row.querySelector('[data-start-checkup] button'); if (button) button.textContent = 'Continue check-up'; }
+                        });
+                    }
+                }
+            } catch (_) { /* Retry on the next refresh when the connection returns. */ }
+            setTimeout(refreshQueueStatus, 5000);
+        }
+        setTimeout(refreshQueueStatus, 5000);
 
         search.addEventListener('input', () => {
             clearTimeout(timer);

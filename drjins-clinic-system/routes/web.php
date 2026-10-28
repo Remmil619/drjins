@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\UserRegistrationController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ClinicInquiryController;
@@ -26,6 +27,10 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', PreventBackHistory::class])->group(function () {
+    Route::get('/users/register', [UserRegistrationController::class, 'create'])
+        ->middleware('can:register-users')->name('users.create');
+    Route::post('/users/register', [UserRegistrationController::class, 'store'])
+        ->middleware('can:register-users')->name('users.store');
     Route::get('/', function () {
         return redirect()->route('dashboard');
     });
@@ -88,6 +93,7 @@ Route::post('/patients/{patient}/consultations', [ConsultationController::class,
     ->middleware(['auth', PreventBackHistory::class])->name('consultations.store');
 Route::middleware(['auth', PreventBackHistory::class])->group(function () {
     Route::get('/patients/{patient}/prescriptions/{consultation}', [ConsultationController::class, 'prescription'])->name('prescriptions.print');
+    Route::get('/patients/{patient}/consultations/{consultation}/print', [ConsultationController::class, 'print'])->name('consultations.print');
     Route::get('/patients/{patient}/edit', [PatientController::class, 'edit'])->name('patients.edit');
     Route::put('/patients/{patient}', [PatientController::class, 'update'])->name('patients.update');
 });
@@ -99,7 +105,9 @@ Route::middleware(['auth', PreventBackHistory::class])->group(function () {
     Route::post('/queue/{entry}/done', [QueueCheckInController::class, 'done'])->name('queue.done');
     Route::patch('/queue/{entry}', [QueueController::class, 'update'])->name('queue.update');
     Route::post('/patients/{patient}/growth', [PediatricRecordController::class, 'growth'])->name('growth.store');
+    Route::patch('/patients/{patient}/growth/{record}', [PediatricRecordController::class, 'updateGrowth'])->name('growth.update');
     Route::post('/patients/{patient}/immunizations', [PediatricRecordController::class, 'immunization'])->name('immunizations.store');
+    Route::patch('/patients/{patient}/immunizations/{record}', [PediatricRecordController::class, 'immunization'])->name('immunizations.update');
     Route::post('/patients/{patient}/clinic-vaccines', [ClinicVaccineController::class, 'store'])->name('clinic-vaccines.store');
     Route::patch('/patients/{patient}/clinic-vaccines/{vaccine}', [ClinicVaccineController::class, 'update'])->name('clinic-vaccines.update');
     Route::post('/patients/{patient}/alerts', [PediatricRecordController::class, 'alert'])->name('alerts.store');
@@ -107,10 +115,13 @@ Route::middleware(['auth', PreventBackHistory::class])->group(function () {
     Route::get('/follow-ups', [OperationsController::class, 'reminders'])->name('reminders.index');
     Route::post('/follow-ups/{type}/{record}/close', [PediatricRecordController::class, 'closeReminder'])->name('reminders.close');
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::get('/patients/{patient}/billing/print', [BillingController::class, 'statement'])->name('billing.print');
     Route::post('/patients/{patient}/charges', [BillingController::class, 'charge'])->name('charges.store');
+    Route::patch('/patients/{patient}/charges/{charge}/price', [BillingController::class, 'price'])->name('charges.price');
     Route::post('/charges/{charge}/payments', [BillingController::class, 'payment'])->name('payments.store');
     Route::post('/billing/{type}/{record}/void', [BillingController::class, 'void'])->name('billing.void');
     Route::get('/reports', [OperationsController::class, 'reports'])->name('reports.index');
+    Route::get('/sales', [OperationsController::class, 'sales'])->name('sales.index');
     Route::get('/activity', [OperationsController::class, 'audit'])->name('audit.index');
 });
 

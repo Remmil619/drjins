@@ -5,8 +5,8 @@
             <small class="d-block text-muted">{{ $charge->charged_on }}</small>
         </div>
         <div class="text-end">
-            <strong>PHP {{ number_format($charge->amount_centavos / 100, 2) }}</strong>
-            <small class="d-block">Balance: PHP {{ number_format($charge->balance_centavos / 100, 2) }}</small>
+            <strong>{{ $charge->price_pending ? 'Needs price' : 'PHP ' . number_format($charge->amount_centavos / 100, 2) }}</strong>
+            <small class="d-block">{{ $charge->price_pending ? 'Set the vaccine price before collecting payment.' : 'Balance: PHP ' . number_format($charge->balance_centavos / 100, 2) }}</small>
         </div>
     </div>
     @if ($charge->voided_at)
@@ -24,7 +24,8 @@
             @else
 
                 <details class="correction-action">
-                    <summary>Correct payment entry</summary>
+                    <summary>Void payment record</summary>
+                    <p class="small text-muted mt-2">Marks this payment as invalid and keeps the original in history. To correct the payment, void it and record a new payment. This does not issue a refund.</p>
 
                     <form
                         class="d-flex flex-wrap gap-2 mt-2"
@@ -32,8 +33,7 @@
                         action="{{ route('billing.void', ['payment', $payment->id]) }}"
                     >
                         @csrf
-                        <label class="visually-hidden" for="void-payment-{{ $payment->id }}">Correction
-                            reason</label>
+                        <label class="visually-hidden" for="void-payment-{{ $payment->id }}">Reason for voiding</label>
                         <input
                             id="void-payment-{{ $payment->id }}"
                             class="form-control"
@@ -126,6 +126,7 @@
 
         <details class="correction-action mt-2">
             <summary class="small text-muted">Void charge</summary>
+            <p class="small text-muted mt-2">Marks this charge as invalid and keeps the original in history. To correct it, void this charge and add a new charge.</p>
 
             <form
                 method="POST"

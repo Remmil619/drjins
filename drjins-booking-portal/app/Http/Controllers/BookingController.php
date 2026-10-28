@@ -21,6 +21,12 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
+        $birthDate = $request->input('child_date_of_birth');
+        if (is_string($birthDate) && preg_match('/^(\d{2})\/(\d{2})\/(\d{2})$/', $birthDate, $parts)) {
+            $year = (int) $parts[3] + ((int) $parts[3] <= 69 ? 2000 : 1900);
+            $request->merge(['child_date_of_birth' => sprintf('%04d-%s-%s', $year, $parts[1], $parts[2])]);
+        }
+
         $validated = $request->validate([
             'guardian_first_name' => 'required|string|max:80',
             'guardian_middle_name' => 'nullable|string|max:80',
@@ -33,16 +39,21 @@ class BookingController extends Controller
             'child_first_name' => 'required|string|max:80',
             'child_middle_name' => 'nullable|string|max:80',
             'child_surname' => 'required|string|max:80',
-            'child_date_of_birth' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'child_date_of_birth' => 'bail|required|date_format:Y-m-d|before_or_equal:'.now('Asia/Manila')->toDateString().'|after:'.now('Asia/Manila')->subYearsNoOverflow(13)->toDateString(),
             'child_sex' => 'required|in:Male,Female',
             'contact_number' => ['required', 'regex:/^(09\d{9}|\+639\d{9})$/'],
             'allergies' => 'nullable|string|max:2000',
             'current_medications' => 'nullable|string|max:2000',
             'medical_notes' => 'nullable|string|max:2000',
-            'appointment_date' => 'required|date_format:Y-m-d|after_or_equal:today|before_or_equal:'.now()->addDays(13)->toDateString(),
+            'appointment_date' => 'required|date_format:Y-m-d|after_or_equal:today|before_or_equal:'.now()->addDays(27)->toDateString(),
             'appointment_time' => 'required|date_format:H:i',
             'reason_for_visit' => 'nullable|string|max:1000',
             'consent' => 'accepted',
+        ], [
+            'child_date_of_birth.required' => "Please enter the child's date of birth.",
+            'child_date_of_birth.date_format' => 'Please enter a valid date of birth in MM/DD/YY format.',
+            'child_date_of_birth.before_or_equal' => 'Date of birth cannot be in the future. The child must already be born.',
+            'child_date_of_birth.after' => 'The clinic only accepts children aged 12 and below.',
         ]);
 
         foreach (['guardian', 'child'] as $person) {
@@ -156,7 +167,7 @@ class BookingController extends Controller
         $dates = [];
         $schedule = $this->clinicSchedule();
 
-        for ($i = 0; $i < 14; $i++) {
+        for ($i = 0; $i < 28; $i++) {
             $date = now()->addDays($i);
             $dateString = $date->toDateString();
             $dayOfWeek = $date->dayOfWeekIso;

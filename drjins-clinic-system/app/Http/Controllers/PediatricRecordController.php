@@ -13,6 +13,28 @@ use Illuminate\Validation\ValidationException;
 
 class PediatricRecordController extends Controller
 {
+    public function updateGrowth(Request $request, Patient $patient, GrowthRecord $record)
+    {
+        abort_unless($record->patient_id === $patient->id && ! $record->voided_at, 404);
+        $data = $request->validate([
+            'measured_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:today', 'after_or_equal:'.$patient->birthdate],
+            'weight_kg' => 'required|numeric|gt:0|max:500',
+            'height_cm' => 'required|numeric|gt:0|max:300',
+            'head_cm' => 'nullable|numeric|gt:0|max:100',
+            'temperature_c' => 'nullable|numeric|between:25,45',
+            'notes' => 'nullable|string|max:2000',
+        ]);
+        DB::transaction(function () use ($record, $patient, $data) {
+            $record = GrowthRecord::whereKey($record->id)->lockForUpdate()->firstOrFail();
+            abort_if($record->voided_at, 409);
+            $record->update($data);
+            $latest = GrowthRecord::where('patient_id', $patient->id)->whereNull('voided_at')
+                ->orderByDesc('measured_on')->orderByDesc('id')->first();
+            $patient->update(['height' => $latest->height_cm, 'weight' => $latest->weight_kg, 'temperature' => $latest->temperature_c]);
+        });
+        return back()->with('success', 'Measurements updated.');
+    }
+
     public function growth(Request $request, Patient $patient)
     {
         $data = $request->validate([
@@ -38,8 +60,11 @@ class PediatricRecordController extends Controller
         return back()->with('success', 'Growth measurements saved.');
     }
 
-    public function immunization(Request $request, Patient $patient)
+    public function immunization(Request $request, Patient $patient, ?Immunization $record = null)
     {
+        if ($record) {
+            abort_unless($record->patient_id === $patient->id && ! $record->voided_at, 404);
+        }
         $data = $request->validate([
 
             'vaccine' => 'required|string|max:150',
@@ -58,20 +83,33 @@ class PediatricRecordController extends Controller
             'notes' => 'nullable|string|max:2000',
 
         ]);
-        DB::transaction(function () use ($data, $patient, $request) {
+        DB::transaction(function () use ($data, $patient, $request, $record) {
             Patient::whereKey($patient->id)->lockForUpdate()->firstOrFail();
-            if (Immunization::where('patient_id', $patient->id)->whereNull('voided_at')->where('vaccine', $data['vaccine'])->where('dose', $data['dose'])->whereDate('administered_on', $data['administered_on'])->exists()) {
+            if ($record) {
+                $record = Immunization::whereKey($record->id)->lockForUpdate()->firstOrFail();
+                abort_if($record->voided_at, 409);
+            }
+            if (Immunization::where('patient_id', $patient->id)->whereNull('voided_at')->when($record, fn ($query) => $query->where('id', '!=', $record->id))->where('vaccine', $data['vaccine'])->where('dose', $data['dose'])->whereDate('administered_on', $data['administered_on'])->exists()) {
                 throw ValidationException::withMessages([
                     'vaccine' => 'This vaccine dose and date are already recorded.',
                 ]);
             }
-            Immunization::create($data + [
+            if ($record) {
+                if ($record->next_due_on !== ($data['next_due_on'] ?? null)) {
+                    $data += ['reminder_closed_at' => null, 'reminder_outcome' => null];
+                }
+                $record->update($data);
+                app(\App\Services\ServiceBilling::class)->vaccination($record);
+                return;
+            }
+            $vaccination = Immunization::create($data + [
                 'patient_id' => $patient->id,
                 'user_id' => $request->user()->id,
             ]);
+            app(\App\Services\ServiceBilling::class)->vaccination($vaccination);
         });
 
-        return back()->with('success', 'Vaccination history saved.');
+        return back()->with('success', $record ? 'Vaccination record updated.' : 'Vaccination record saved.');
     }
 
     public function alert(Request $request, Patient $patient)
@@ -102,6 +140,7 @@ class PediatricRecordController extends Controller
         ][$type] ?? null;
         abort_unless($class, 404);
         DB::transaction(function () use ($class, $patient, $record, $data) {
+            Patient::whereKey($patient->id)->lockForUpdate()->firstOrFail();
             $entry = $class::where('patient_id', $patient->id)->whereKey($record)->lockForUpdate()->firstOrFail();
             if ($entry->voided_at) {
                 throw ValidationException::withMessages([
@@ -111,6 +150,8 @@ class PediatricRecordController extends Controller
             $entry->update($data + [
                 'voided_at' => now(),
             ]);
+            if ($entry instanceof Consultation) app(\App\Services\ServiceBilling::class)->consultation($entry);
+            if ($entry instanceof Immunization) app(\App\Services\ServiceBilling::class)->vaccination($entry);
         });
 
         return back()->with('success', 'Record voided. The original remains in the history; add a corrected entry if needed.');

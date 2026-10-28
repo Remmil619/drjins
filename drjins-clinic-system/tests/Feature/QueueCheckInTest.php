@@ -36,6 +36,59 @@ class QueueCheckInTest extends TestCase
         ], $values));
     }
 
+    public function test_daily_numbers_ignore_previous_days_and_keep_completed_places(): void
+    {
+        QueueEntry::create(['reason' => 'Clinic visit', 'visit_date' => today()->subDay()->toDateString(), 'status' => 'completed']);
+        $first = QueueEntry::create(['reason' => 'Clinic visit', 'visit_date' => today()->toDateString(), 'status' => 'waiting']);
+        $second = QueueEntry::create(['reason' => 'Clinic visit', 'visit_date' => today()->toDateString(), 'status' => 'waiting']);
+        $this->get('/queue')->assertOk()->assertViewHas('entries', fn ($entries) =>
+            $entries->first()->daily_number === 1 && $entries->last()->daily_number === 2);
+        $first->update(['status' => 'completed']);
+        $this->get('/queue')->assertOk()->assertViewHas('entries', fn ($entries) =>
+            $entries->count() === 1 && $entries->first()->id === $second->id && $entries->first()->daily_number === 2);
+    }
+
+    public function test_doctor_starts_checkup_and_staff_sees_shared_status(): void
+    {
+        $booking = $this->booking();
+        $this->post('/queue', ['online_appointment_id' => $booking->id]);
+        $entry = QueueEntry::firstOrFail();
+        $this->patch(route('queue.update', $entry), ['status' => 'in_consultation'])->assertForbidden();
+        $doctor = User::factory()->create();
+        $doctor->forceFill(['role' => 'doctor'])->save();
+        $this->actingAs($doctor)->get('/queue')->assertSee('Start check-up')->assertDontSee('Complete visit</button>', false);
+        $this->patch(route('queue.update', $entry), ['status' => 'in_consultation'])->assertSessionHasNoErrors();
+        $this->assertSame('in_consultation', $entry->fresh()->status);
+        $this->assertNotNull($entry->fresh()->started_at);
+        $this->assertNull($entry->fresh()->completed_at);
+        $patientId = $entry->fresh()->patient_id;
+        $this->assertNotNull($patientId);
+        $this->assertSame($patientId, $booking->fresh()->patient_id);
+        $this->assertDatabaseCount('patients', 1);
+        $startedAt = $entry->fresh()->started_at;
+        $this->patch(route('queue.update', $entry), ['status' => 'in_consultation'])
+            ->assertRedirect(route('patients.show', ['patient' => $patientId, 'tab' => 'consultations']));
+        $this->assertSame($startedAt, $entry->fresh()->started_at);
+        $this->assertDatabaseCount('patients', 1);
+        $this->get(route('patients.show', $patientId))->assertOk()->assertSee('ANA');
+        $this->get('/queue')->assertDontSee('Open record')->assertSee('Continue check-up');
+        $this->assertSame('In Queue', $booking->fresh()->status);
+        $this->get('/queue')->assertSee('In check up')->assertDontSee('Complete visit</button>', false);
+        $this->get(route('patients.show', $patientId))->assertSee('Complete visit</button>', false)->assertSee('Queue #1');
+        $this->post(route('consultations.store', $patientId), [
+            'visit_date' => today()->toDateString(), 'complaint' => 'CHECKUP', 'assessment' => 'WELL',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('in_consultation', $entry->fresh()->status);
+        $this->assertNull($entry->fresh()->completed_at);
+        $this->assertSame('In Queue', $booking->fresh()->status);
+        $this->actingAs(User::factory()->create())->get('/queue')->assertSee('In check up')->assertDontSee('Start check-up</button>', false);
+        $this->getJson('/queue')->assertOk()->assertJsonPath('entries.0.status', 'in_consultation');
+        $this->actingAs($doctor)->post(route('queue.done', $entry))->assertSessionHasNoErrors();
+        $this->assertSame('completed', $entry->fresh()->status);
+        $this->get(route('patients.show', $patientId))->assertDontSee('Complete visit</button>', false);
+        $this->getJson('/queue')->assertJsonCount(0, 'entries');
+    }
+
     public function test_online_patient_is_registered_only_when_queue_visit_is_done(): void
     {
         $booking = $this->booking();
@@ -94,10 +147,56 @@ class QueueCheckInTest extends TestCase
         ]);
         $this->getJson('/queue/search?search=ANA%20CRUZ')->assertJsonPath('results.0.patient_id', $patient->id);
         $this->post('/queue', ['patient_id' => $patient->id])->assertSessionHasNoErrors();
+        $doctor = User::factory()->create();
+        $doctor->forceFill(['role' => 'doctor'])->save();
+        $this->actingAs($doctor)->patch(route('queue.update', QueueEntry::firstOrFail()), ['status' => 'in_consultation'])
+            ->assertRedirect(route('patients.show', ['patient' => $patient->id, 'tab' => 'consultations']));
         $this->post('/queue', ['patient_id' => $patient->id])->assertSessionHasErrors();
         $this->getJson('/queue/search?search=CRUZ')->assertJsonCount(0, 'results');
         $this->post(route('queue.done', QueueEntry::firstOrFail()))->assertSessionHasNoErrors();
         $this->assertDatabaseCount('patients', 1);
         $this->assertDatabaseCount('consultations', 0);
+    }
+
+    public function test_start_checkup_requires_missing_booking_demographics_without_partial_registration(): void
+    {
+        $booking = $this->booking(['child_date_of_birth' => null, 'child_sex' => null]);
+        $this->post('/queue', ['online_appointment_id' => $booking->id]);
+        $entry = QueueEntry::firstOrFail();
+        $doctor = User::factory()->create();
+        $doctor->forceFill(['role' => 'doctor'])->save();
+        $this->actingAs($doctor)->patch(route('queue.update', $entry), ['status' => 'in_consultation'])
+            ->assertSessionHasErrors(['birthdate', 'sex']);
+        $this->assertSame('waiting', $entry->fresh()->status);
+        $this->assertDatabaseCount('patients', 0);
+        $this->patch(route('queue.update', $entry), [
+            'status' => 'in_consultation', 'birthdate' => '2020-01-01', 'sex' => 'Female',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('patients.show', [
+            'patient' => $entry->fresh()->patient_id, 'tab' => 'consultations',
+        ]));
+        $this->assertDatabaseCount('patients', 1);
+    }
+
+    public function test_portal_allergies_appear_on_the_linked_patient_record_after_checkup_starts(): void
+    {
+        $booking = $this->booking(['allergies' => 'Peanuts <script>alert(1)</script>']);
+        $this->post('/queue', ['online_appointment_id' => $booking->id]);
+        $entry = QueueEntry::firstOrFail();
+        $doctor = User::factory()->create();
+        $doctor->forceFill(['role' => 'doctor'])->save();
+        $this->actingAs($doctor)->patch(route('queue.update', $entry), ['status' => 'in_consultation'])->assertSessionHasNoErrors();
+        $patient = $entry->fresh()->patient;
+        foreach (['consultations', 'alerts', 'billing'] as $tab) {
+            $this->get(route('patients.show', [$patient, 'tab' => $tab]))->assertOk()
+                ->assertSee($booking->allergies)->assertSee('Reported in booking portal')
+                ->assertDontSee('<script>alert(1)</script>', false)
+                ->assertDontSee('No alerts recorded.');
+        }
+        $patient->update(['online_appointment_no' => null]);
+        $this->get(route('patients.show', $patient))->assertSee($booking->allergies);
+        $booking->update(['allergies' => '   ']);
+        $this->get(route('patients.show', $patient))->assertSee('No alerts recorded.');
+        $this->booking(['appointment_no' => 'OTHER-CHILD', 'allergies' => 'UNRELATED ALLERGY']);
+        $this->get(route('patients.show', $patient))->assertDontSee('UNRELATED ALLERGY');
     }
 }

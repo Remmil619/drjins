@@ -17,11 +17,20 @@ class QueueCheckInController extends Controller
     public function index(Request $request)
     {
         $data = $request->validate(['date' => 'nullable|date_format:Y-m-d']);
-        app(BookingSync::class)->sync();
+        if (! $request->expectsJson()) {
+            app(BookingSync::class)->sync();
+        }
         $date = $data['date'] ?? today()->toDateString();
         $entries = QueueEntry::with(['patient', 'appointment'])
-            ->whereDate('visit_date', $date)->whereIn('status', ['waiting', 'in_consultation'])
-            ->orderBy('id')->get();
+            ->whereDate('visit_date', $date)->orderBy('id')->get()
+            ->each(fn ($entry, $index) => $entry->setAttribute('daily_number', $index + 1))
+            ->whereIn('status', ['waiting', 'in_consultation']);
+
+        if ($request->expectsJson()) {
+            return response()->json(['entries' => $entries->map(fn ($entry) => [
+                'id' => $entry->id, 'status' => $entry->status,
+            ])->values()]);
+        }
 
         return view('queue.index', compact('entries', 'date'));
     }
@@ -119,28 +128,7 @@ class QueueCheckInController extends Controller
             if ($booking && ! in_array($booking->status, ['Approved', 'In Queue'], true)) {
                 throw ValidationException::withMessages(['status' => 'Review the booking status before completing this visit.']);
             }
-            if (! $entry->patient_id && $booking) {
-                $patient = $booking->patient ?? Patient::where('online_appointment_no', $booking->appointment_no)->first();
-                if (! $patient) {
-                    $details = Validator::make([
-                        'birthdate' => $input['birthdate'] ?? $booking->child_date_of_birth,
-                        'sex' => $input['sex'] ?? $booking->child_sex,
-                    ], ['birthdate' => 'required|date_format:Y-m-d|before_or_equal:today', 'sex' => 'required|in:Male,Female'])->validate();
-                    $parts = preg_split('/\s+/', trim($booking->child_name));
-                    $first = array_shift($parts);
-                    $last = count($parts) ? array_pop($parts) : 'For Update';
-                    $patient = Patient::create([
-                        'patient_no' => 'PAT-'.now()->format('Ymd').'-'.Str::upper(Str::random(8)),
-                        'online_appointment_no' => $booking->appointment_no,
-                        'first_name' => $first, 'last_name' => $last, 'middle_name' => implode(' ', $parts) ?: null,
-                        'birthdate' => $details['birthdate'], 'sex' => $details['sex'],
-                        'guardian_name' => $booking->guardian_name, 'guardian_relationship' => $booking->guardian_relationship,
-                        'contact_number' => $booking->contact_number, 'address' => $booking->guardian_address,
-                        'emergency_contact' => $booking->emergency_contact_number, 'status' => 'Active',
-                    ]);
-                }
-                $entry->patient_id = $patient->id;
-            }
+            app(\App\Services\QueuePatientRegistration::class)->attach($entry, $booking, $input);
             $entry->fill(['status' => 'completed', 'completed_at' => now()])->save();
             if ($booking) {
                 $booking->update([

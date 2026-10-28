@@ -48,6 +48,28 @@ class OperationsController extends Controller
         return view('operations.reports', compact('from', 'to', 'visits', 'consultations', 'vaccines', 'charged', 'collected', 'outstanding'));
     }
 
+    public function sales(Request $request)
+    {
+        $data = $request->validate([
+            'from' => 'nullable|date_format:Y-m-d',
+            'to' => 'nullable|date_format:Y-m-d|after_or_equal:from',
+        ]);
+        $from = $data['from'] ?? today()->startOfMonth()->toDateString();
+        $to = $data['to'] ?? today()->toDateString();
+
+        $payments = Payment::with(['charge.patient'])
+            ->whereNull('voided_at')
+            ->whereBetween('paid_on', [$from, $to])
+            ->whereHas('charge', fn ($query) => $query->whereNull('voided_at'))
+            ->orderByDesc('paid_on')->orderByDesc('id')->get();
+
+        $totalSales = $payments->sum('amount_centavos');
+        $salesByDay = $payments->groupBy('paid_on')->map(fn ($day) => $day->sum('amount_centavos'));
+        $salesByMethod = $payments->groupBy('method')->map(fn ($method) => $method->sum('amount_centavos'));
+
+        return view('operations.sales', compact('from', 'to', 'payments', 'totalSales', 'salesByDay', 'salesByMethod'));
+    }
+
     public function audit(Request $request)
     {
         $request->validate([

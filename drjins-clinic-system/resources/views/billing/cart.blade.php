@@ -1,6 +1,6 @@
 <h3 class="h5">
-    Billing cart</h3>
-<p class="small text-muted">Add services below, then pay together. Partial payments apply to the oldest added items
+    Services &amp; payments</h3>
+<p class="small text-muted">Saved consultations and vaccinations given at this clinic appear automatically. Partial payments apply to the oldest added items
     first.</p>
 <div class="table-responsive">
     <table class="table align-middle">
@@ -22,7 +22,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="text-muted py-4">Your cart is empty. Add a service or fee below.</td>
+                    <td colspan="4" class="text-muted py-4">No priced services awaiting payment.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -54,7 +54,7 @@
                 value="{{ $charge->id }}"
             >
         @endforeach
-        <h3 class="h6">Checkout</h3>
+        <h3 class="h6">Payment</h3>
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="checkout-amount" class="form-label">Payment amount (PHP)</label>
@@ -107,6 +107,6 @@
                 >
             </div>
         </div>
-        <button class="btn btn-primary mt-3">Pay cart</button>
+        <button class="btn btn-primary mt-3">Record payment</button>
     </form>
 @endif

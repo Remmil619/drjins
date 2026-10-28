@@ -1,0 +1,51 @@
+#panel-history .modal-dialog { max-width: 960px; }
+#panel-history .modal-header, #panel-history .modal-footer { padding: 1.25rem 1.5rem; }
+#panel-history .modal-body { background: #f4f8f9; padding: 1.5rem; }
+#panel-history .consultation-history-card { background: #fff; border: 1px solid #dce7e9; border-radius: 14px; margin-bottom: 1.25rem; overflow: hidden; }
+#panel-history .consultation-history-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid #e7eef0; background: #fafffe; }
+#panel-history .consultation-history-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; padding: 1.5rem; margin: 0; }
+#panel-history .consultation-history-note { min-width: 0; }
+#panel-history .consultation-history-note.full-width { grid-column: 1 / -1; }
+#panel-history .consultation-history-note dt { color: #546e79; font-size: .8rem; margin-bottom: .4rem; }
+#panel-history .consultation-history-note dd { color: #203e49; font-size: .95rem; line-height: 1.65; margin: 0; overflow-wrap: anywhere; }
+#panel-history .consultation-history-actions { padding: 1rem 1.5rem; border-top: 1px solid #e7eef0; }
+#panel-history .is-voided { border-left: 4px solid #b47a7a; }
+.vaccine-management-list { list-style: none; margin: 20px 0; padding: 0; border: 1px solid #dce7e9; border-radius: 12px; overflow: hidden; }
+.vaccine-management-row { display: grid; grid-template-columns: minmax(0, 1fr) 280px 150px; align-items: center; gap: 20px; padding: 20px; background: #fff; }
+.vaccine-management-row + .vaccine-management-row { border-top: 1px solid #e1e9ec; }
+.vaccine-management-row > span { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.vaccine-management-row small { font-size: 13px; font-weight: 400; line-height: 1.7; }
+.vaccine-price-form { display: flex; align-items: end; gap: 8px; }
+.vaccine-price-form > div { flex: 1; min-width: 0; }
+.vaccine-price-form .form-label { font-size: 13px; white-space: nowrap; }
+.vaccine-price-form .btn { min-height: 42px; white-space: nowrap; }
+.vaccine-management-row > form:last-child .btn { width: 100%; min-height: 42px; }
+.vaccine-add-form { padding: 22px; background: #f4f9f8; border: 1px solid #dbe8e4; border-radius: 12px; }
+#vaccine-manager { scroll-margin-top: 16px; }
+@media (max-width: 991.98px) { .vaccine-management-row { grid-template-columns: 1fr; gap: 14px; } .vaccine-price-form { max-width: 400px; } .vaccine-management-row > form:last-child .btn { width: auto; } }
+/* Patient record buttons: readable labels and previews at every screen size. */
+button[data-bs-target^="#panel-"] {
+    font-size: 16px;
+    line-height: 1.5;
+    color: #203e49;
+    border-radius: 12px !important;
+    transition: background-color .15s, border-color .15s;
+    white-space: normal;
+}
+button[data-bs-target^="#panel-"]:hover { background: #eef8f6; border-color: #78b6ae !important; }
+button[data-bs-target^="#panel-"]:focus-visible { outline: 3px solid #278e87; outline-offset: 3px; }
+button[data-bs-target^="#panel-"] .fw-semibold,
+button[data-bs-target^="#panel-"] strong { font-size: 17px; font-weight: 700; }
+button[data-bs-target^="#panel-"] .small,
+button[data-bs-target^="#panel-"] small { display: block; font-size: 14px; line-height: 1.65; color: #4c6370 !important; margin-top: 5px; overflow-wrap: anywhere; }
+button[data-bs-target^="#panel-"] .badge { font-size: 13px; font-weight: 600; line-height: 1.4; padding: 9px 13px; background: #e1f1ee !important; color: #11665f !important; border: 1px solid #c5e2dc; flex-shrink: 0; }
+@media (max-width: 575.98px) {
+    button[data-bs-target^="#panel-"] { flex-wrap: wrap; gap: 12px; }
+    button[data-bs-target^="#panel-"] > span:first-child { flex-basis: 100%; }
+}
+@media (max-width: 575.98px) {
+    #panel-history .modal-dialog { max-width: none; }
+    #panel-history .modal-body { padding: .75rem; }
+    #panel-history .consultation-history-notes { grid-template-columns: 1fr; padding: 1rem; }
+    #panel-history .consultation-history-header, #panel-history .consultation-history-actions { padding: 1rem; }
+}

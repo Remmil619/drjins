@@ -14,40 +14,60 @@
         background: #fff;
         border: 1px solid #e5e7eb;
         border-radius: 18px;
-        padding: 18px;
+        padding: 16px;
+        width: 100%;
+    }
+
+    .calendar-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 12px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #edf1ef;
+        color: #24483c;
+        font-size: 14px;
+    }
+
+    .calendar-heading span {
+        font-size: 11px;
+        font-weight: 500;
+        color: #687b73;
+        white-space: nowrap;
     }
 
     .calendar-header-grid,
     .calendar-grid {
         display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 7px;
     }
 
     .calendar-weekday {
         text-align: center;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 700;
         color: #6b7280;
         padding: 6px 0;
     }
 
     .calendar-empty {
-        min-height: 92px;
+        min-height: 56px;
     }
 
     .calendar-day {
         border: 1px solid #d1d5db;
-        border-radius: 14px;
+        border-radius: 8px;
         background: #fff;
-        min-height: 92px;
-        padding: 8px 6px;
+        min-height: 56px;
+        padding: 7px 2px;
         text-align: center;
         transition: 0.2s ease;
         width: 100%;
     }
 
-    .calendar-day .day-name {
+    .calendar-day .day-name { display: none;
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
@@ -55,43 +75,53 @@
     }
 
     .calendar-day .day-number {
-        font-size: 22px;
+        display: inline-block;
+        font-size: 18px;
         font-weight: 800;
         line-height: 1;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
 
     .calendar-day .month-label {
-        font-size: 11px;
-        margin-bottom: 4px;
+        display: inline-block;
+        font-size: 10px;
+        margin-left: 2px;
     }
 
     .calendar-day .status-label {
-        font-size: 11px;
+        font-size: 10px;
+        margin-top: 4px;
         line-height: 1.2;
     }
 
     .calendar-day.available {
-        border-color: #198754;
-        color: #198754;
+        border-color: #e1ede6;
+        background: #f2f8f4;
+        color: #216647;
     }
 
     .calendar-day.available:hover {
-        background: #ecfdf3;
+        border-color: #198754;
+        background: #e3f2e8;
         transform: translateY(-1px);
     }
 
     .calendar-day.closed {
-        border-color: #f199a0;
-        color: #dc3545;
-        background: #fffafb;
+        border-color: #f1e8e8;
+        color: #ac6868;
+        background: #fcf7f7;
     }
 
     .calendar-day.selected {
         background: #198754;
         color: #fff !important;
         border-color: #198754;
-        box-shadow: 0 6px 18px rgba(25, 135, 84, 0.20);
+        box-shadow: 0 2px 6px rgba(25, 135, 84, 0.16);
+    }
+
+    .calendar-day:focus-visible {
+        outline: 2px solid #145c3c;
+        outline-offset: 2px;
     }
 
     .calendar-day.selected .status-label,
@@ -157,10 +187,12 @@
         }
 
         .calendar-empty {
-            min-height: 65px;
+            min-height: 48px;
         }
         .calendar-grid, .calendar-header-grid { gap: 3px; }
-        .calendar-day { min-height: 65px; border-radius: 7px; padding: 6px 1px; }
+        .calendar-day { min-height: 48px; border-radius: 7px; padding: 6px 1px; }
+        .calendar-day .month-label { display: block; margin-left: 0; }
+        .calendar-heading { font-size: 12px; gap: 6px; }
         .calendar-day .day-number { font-size: 17px; }
         .calendar-day .day-name, .calendar-day .status-label { display: none; }
         .calendar-day .month-label, .calendar-weekday { font-size: 10px; }
@@ -181,7 +213,7 @@
 
             <div class="clinic-note mb-4">
                 <strong>Reminder:</strong>
-                Choose from the next 14 days. Green dates and times are available; red ones are unavailable. All times are Philippine time.
+                Choose from the next 4 weeks (28 days). Green dates and times are available; red ones are unavailable. All times are Philippine time.
             </div>
 
             @if ($errors->any())
@@ -209,34 +241,51 @@
                         <p class="small text-muted mb-4">Please provide parent or guardian details separately from the child’s. No password is needed.</p>
 
                         <fieldset class="mb-4"><legend class="h5 fw-bold border-bottom pb-2 mb-3">Parent or Guardian Information</legend><div class="row g-3">
-                            <div class="col-md-4"><label class="form-label" for="guardian_first_name">First Name</label><input type="text" id="guardian_first_name" name="guardian_first_name" placeholder="First Name (Ex. DAVID JR, JOHN III)" class="form-control" value="{{ old('guardian_first_name') }}" autocomplete="section-guardian given-name" maxlength="80" required></div>
+                            <div class="col-md-4"><label class="form-label" for="guardian_first_name">First Name <span class="text-danger" aria-hidden="true">*</span></label><input type="text" id="guardian_first_name" name="guardian_first_name" placeholder="First Name (Ex. DAVID JR, JOHN III)" class="form-control" value="{{ old('guardian_first_name') }}" autocomplete="section-guardian given-name" maxlength="80" required></div>
                             <div class="col-md-4"><label class="form-label" for="guardian_middle_name">Middle Name <span class="text-muted">(optional)</span></label><input type="text" id="guardian_middle_name" name="guardian_middle_name" placeholder="Middle Name" class="form-control" value="{{ old('guardian_middle_name') }}" autocomplete="section-guardian additional-name" maxlength="80"></div>
-                            <div class="col-md-4"><label class="form-label" for="guardian_surname">Last Name</label><input type="text" id="guardian_surname" name="guardian_surname" placeholder="Surname" class="form-control" value="{{ old('guardian_surname') }}" autocomplete="section-guardian family-name" maxlength="80" required></div>
-                            <div class="col-md-6"><label class="form-label" for="guardian_relationship">Relationship to child</label><select id="guardian_relationship" name="guardian_relationship" class="form-select" required><option value="">Choose one</option>@foreach(['Mother', 'Father', 'Legal guardian', 'Other relative', 'Other'] as $relationship)<option value="{{ $relationship }}" @selected(old('guardian_relationship') === $relationship)>{{ $relationship }}</option>@endforeach</select></div>
-                            <div class="col-md-6"><label class="form-label" for="contact_number">Mobile Number</label><input type="tel" id="contact_number" name="contact_number" class="form-control" value="{{ old('contact_number') }}" placeholder="Mobile Number (09XXXXXXXXX)" pattern="(09[0-9]{9}|\+639[0-9]{9})" autocomplete="tel" required><div class="form-text">Used for appointment updates and status checks.</div></div>
+                            <div class="col-md-4"><label class="form-label" for="guardian_surname">Last Name <span class="text-danger" aria-hidden="true">*</span></label><input type="text" id="guardian_surname" name="guardian_surname" placeholder="Surname" class="form-control" value="{{ old('guardian_surname') }}" autocomplete="section-guardian family-name" maxlength="80" required></div>
+                            <div class="col-md-6"><label class="form-label" for="guardian_relationship">Relationship to child <span class="text-danger" aria-hidden="true">*</span></label><select id="guardian_relationship" name="guardian_relationship" class="form-select" required><option value="">Choose one</option>@foreach(['Mother', 'Father', 'Legal guardian', 'Other relative', 'Other'] as $relationship)<option value="{{ $relationship }}" @selected(old('guardian_relationship') === $relationship)>{{ $relationship }}</option>@endforeach</select></div>
+                            <div class="col-md-6"><label class="form-label" for="contact_number">Mobile Number <span class="text-danger" aria-hidden="true">*</span></label><input type="tel" id="contact_number" name="contact_number" class="form-control" value="{{ old('contact_number') }}" placeholder="Mobile Number (09XXXXXXXXX)" pattern="(09[0-9]{9}|\+639[0-9]{9})" autocomplete="tel" required><div class="form-text">Used for appointment updates and status checks.</div></div>
                             <div class="col-md-6"><label class="form-label" for="guardian_email">Email address <span class="text-muted">(optional)</span></label><input type="email" id="guardian_email" name="guardian_email" placeholder="Enter Email Address" aria-describedby="guardianEmailHelp" class="form-control" value="{{ old('guardian_email') }}" autocomplete="email" maxlength="255"><div id="guardianEmailHelp" class="form-text">Please use an active email address.</div></div>
                             <div class="col-12"><fieldset><legend class="form-label fs-6">Home address</legend><div class="row g-3">
-                                <div class="col-md-4"><label class="form-label" for="guardian_barangay">Barangay</label><input type="text" id="guardian_barangay" name="guardian_barangay" class="form-control" value="{{ old('guardian_barangay') }}" autocomplete="address-level3" maxlength="150" placeholder="Barangay" required></div>
-                                <div class="col-md-4"><label class="form-label" for="guardian_municipality">Municipality</label><input type="text" id="guardian_municipality" name="guardian_municipality" class="form-control" value="{{ old('guardian_municipality') }}" autocomplete="address-level2" maxlength="150" placeholder="Municipality" required></div>
-                                <div class="col-md-4"><label class="form-label" for="guardian_province">Province</label><input type="text" id="guardian_province" name="guardian_province" class="form-control" value="{{ old('guardian_province') }}" autocomplete="address-level1" maxlength="150" placeholder="Province" required></div>
+                                <div class="col-md-4"><label class="form-label" for="guardian_province">Province <span class="text-danger" aria-hidden="true">*</span></label><select id="guardian_province" name="guardian_province" class="form-select" data-selected="{{ old('guardian_province') }}" autocomplete="address-level1" required><option value="">Loading provinces…</option></select></div>
+                                <div class="col-md-4"><label class="form-label" for="guardian_municipality">Municipality / City <span class="text-danger" aria-hidden="true">*</span></label><select id="guardian_municipality" name="guardian_municipality" class="form-select" data-selected="{{ old('guardian_municipality') }}" autocomplete="address-level2" required disabled><option value="">Select a province first</option></select></div>
+                                <div class="col-md-4"><label class="form-label" for="guardian_barangay">Barangay <span class="text-danger" aria-hidden="true">*</span></label><select id="guardian_barangay" name="guardian_barangay" class="form-select" data-selected="{{ old('guardian_barangay') }}" autocomplete="address-level3" required disabled><option value="">Select a municipality first</option></select></div>
+                                <div class="col-12"><span id="addressStatus" class="form-text" role="status">Select your province, municipality or city, then barangay.</span> <button id="retryAddress" type="button" class="btn btn-sm btn-outline-secondary" hidden>Retry loading addresses</button></div>
                             </div></fieldset></div>
                         </div></fieldset>
 
                         <fieldset class="mb-4"><legend class="h5 fw-bold border-bottom pb-2 mb-3">Child’s Information</legend><div class="row g-3">
-                            <div class="col-md-4"><label class="form-label" for="child_first_name">First Name</label><input type="text" id="child_first_name" name="child_first_name" placeholder="First Name (Ex. DAVID JR, JOHN III)" class="form-control" value="{{ old('child_first_name') }}" autocomplete="section-child given-name" maxlength="80" required></div>
+                            <div class="col-md-4"><label class="form-label" for="child_first_name">First Name <span class="text-danger" aria-hidden="true">*</span></label><input type="text" id="child_first_name" name="child_first_name" placeholder="First Name (Ex. DAVID JR, JOHN III)" class="form-control" value="{{ old('child_first_name') }}" autocomplete="section-child given-name" maxlength="80" required></div>
                             <div class="col-md-4"><label class="form-label" for="child_middle_name">Middle Name <span class="text-muted">(optional)</span></label><input type="text" id="child_middle_name" name="child_middle_name" placeholder="Middle Name" class="form-control" value="{{ old('child_middle_name') }}" autocomplete="section-child additional-name" maxlength="80"></div>
-                            <div class="col-md-4"><label class="form-label" for="child_surname">Last Name</label><input type="text" id="child_surname" name="child_surname" placeholder="Surname" class="form-control" value="{{ old('child_surname') }}" autocomplete="section-child family-name" maxlength="80" required></div>
-                            <div class="col-md-6"><label class="form-label" for="child_date_of_birth">Date of birth</label><input type="date" id="child_date_of_birth" name="child_date_of_birth" class="form-control" value="{{ old('child_date_of_birth') }}" max="{{ now()->toDateString() }}" required></div>
-                            <div class="col-md-6"><label class="form-label" for="child_sex">Sex</label><select id="child_sex" name="child_sex" class="form-select" required><option value="">Choose one</option>@foreach(['Male', 'Female'] as $sex)<option value="{{ $sex }}" @selected(old('child_sex') === $sex)>{{ $sex }}</option>@endforeach</select></div>
+                            <div class="col-md-4"><label class="form-label" for="child_surname">Last Name <span class="text-danger" aria-hidden="true">*</span></label><input type="text" id="child_surname" name="child_surname" placeholder="Surname" class="form-control" value="{{ old('child_surname') }}" autocomplete="section-child family-name" maxlength="80" required></div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="child_date_of_birth">Date of birth <span class="text-danger" aria-hidden="true">*</span></label>
+                                @php
+                                    $birthDateValue = old('child_date_of_birth', '');
+                                    if (is_string($birthDateValue) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthDateValue)) {
+                                        $birthDateValue = substr($birthDateValue, 5, 2).'/'.substr($birthDateValue, 8, 2).'/'.substr($birthDateValue, 2, 2);
+                                    }
+                                @endphp
+                                <input type="text" id="child_date_of_birth" name="child_date_of_birth" class="form-control @error('child_date_of_birth') is-invalid @enderror" value="{{ is_string($birthDateValue) ? $birthDateValue : '' }}" placeholder="MM/DD/YY" inputmode="numeric" maxlength="8" pattern="[0-9]{2}/[0-9]{2}/[0-9]{2}" data-min="{{ now('Asia/Manila')->subYearsNoOverflow(13)->addDay()->toDateString() }}" data-max="{{ now('Asia/Manila')->toDateString() }}" aria-describedby="childBirthError" aria-invalid="{{ $errors->has('child_date_of_birth') ? 'true' : 'false' }}" required>
+                                <div id="childBirthError" class="invalid-feedback" aria-live="polite">@error('child_date_of_birth'){{ $message }}@enderror</div>
+                            </div>
+                            <div class="col-md-6"><label class="form-label" for="child_sex">Sex <span class="text-danger" aria-hidden="true">*</span></label><select id="child_sex" name="child_sex" class="form-select" required><option value="">Choose one</option>@foreach(['Male', 'Female'] as $sex)<option value="{{ $sex }}" @selected(old('child_sex') === $sex)>{{ $sex }}</option>@endforeach</select></div>
                             <div class="col-12"><label class="form-label" for="allergies">Known allergies <span class="text-muted">(optional)</span></label><textarea id="allergies" name="allergies" class="form-control" rows="2" maxlength="2000" placeholder="List allergies, or write ‘None known’">{{ old('allergies') }}</textarea></div>
                             <div class="col-12"><label class="form-label" for="current_medications">Current medicines or supplements <span class="text-muted">(optional)</span></label><textarea id="current_medications" name="current_medications" class="form-control" rows="2" maxlength="2000" placeholder="Include name and dose if known">{{ old('current_medications') }}</textarea></div>
                             <div class="col-12"><label class="form-label" for="medical_notes">Relevant health history or notes <span class="text-muted">(optional)</span></label><textarea id="medical_notes" name="medical_notes" class="form-control" rows="3" maxlength="2000" placeholder="Briefly note important past conditions or care needs. You may bring detailed records to the visit.">{{ old('medical_notes') }}</textarea></div>
                         </div></fieldset>
 
                         <div class="mb-4">
-                            <label class="form-label fw-bold">Choose Available Date</label>
+                            <label class="form-label fw-bold">Choose Available Date <span class="text-danger" aria-hidden="true">*</span></label>
 
                             <div class="calendar-wrapper">
+                                @if (count($calendarDates))
+                                    <div class="calendar-heading">
+                                        <strong>{{ Carbon::parse($calendarDates[0]['date'])->format('M j') }} – {{ Carbon::parse($calendarDates[count($calendarDates) - 1]['date'])->format('M j, Y') }}</strong>
+                                        <span>4-week availability</span>
+                                    </div>
+                                @endif
                                 <div class="calendar-header-grid mb-2">
                                     <div class="calendar-weekday">Mon</div>
                                     <div class="calendar-weekday">Tue</div>
@@ -269,9 +318,11 @@
                                             <div class="day-number">{{ $dateObject->format('d') }}</div>
                                             <div class="month-label">{{ $dateObject->format('M') }}</div>
                                             <div class="status-label">
-                                                {{ $calendarDate['status'] }}
+
                                                 @if ($calendarDate['clickable'])
-                                                    <br>{{ $calendarDate['available_count'] }} slots
+                                                    {{ $calendarDate['available_count'] }} slots
+                                                @else
+                                                    {{ $calendarDate['status'] }}
                                                 @endif
                                             </div>
                                         </button>
@@ -281,7 +332,7 @@
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label fw-bold">Choose Preferred Time</label>
+                            <label class="form-label fw-bold">Choose Preferred Time <span class="text-danger" aria-hidden="true">*</span></label>
 
                             <div id="selectedDateText" class="text-muted mb-3" aria-live="polite">
                                 Please select an available date first.
@@ -297,7 +348,7 @@
 
                         <div class="form-check mb-4">
                             <input type="checkbox" id="consent" name="consent" value="1" class="form-check-input" required @checked(old('consent'))>
-                            <label class="form-check-label" for="consent">
+                            <label class="form-check-label" for="consent"> <span class="text-danger" aria-hidden="true">*</span>
                                 I consent to the use of the details provided, including the child’s health notes, to arrange and manage this appointment. <a href="{{ route('privacy') }}">Read the privacy notice</a>.
                             </label>
                         </div>
@@ -316,6 +367,7 @@
     </div>
 </div>
 
+<script src="{{ asset('js/booking-address.js') }}" data-address-url="{{ asset('data/philippine-addresses.json') }}" defer></script>
 <script>
     const calendarDates = @json($calendarDates);
     const oldDate = @json(old('appointment_date'));
@@ -331,6 +383,34 @@
     const submitBooking = document.getElementById('submitBooking');
     bookingForm.noValidate = true;
 
+    const childBirthInput = document.getElementById('child_date_of_birth');
+    const childBirthError = document.getElementById('childBirthError');
+    function validateChildBirth() {
+        childBirthInput.setCustomValidity('');
+        let message = '';
+        const parts = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(childBirthInput.value);
+        const year = parts ? Number(parts[3]) + (Number(parts[3]) <= 69 ? 2000 : 1900) : 0;
+        const date = parts ? new Date(Date.UTC(year, Number(parts[1]) - 1, Number(parts[2]))) : null;
+        const validDate = parts && date.getUTCFullYear() === year && date.getUTCMonth() === Number(parts[1]) - 1 && date.getUTCDate() === Number(parts[2]);
+        const isoDate = validDate ? `${year}-${parts[1]}-${parts[2]}` : '';
+        if (!childBirthInput.value) {
+            message = "Please enter the child's date of birth.";
+        } else if (!validDate) {
+            message = 'Please enter a valid date of birth in MM/DD/YY format.';
+        } else if (isoDate > childBirthInput.dataset.max) {
+            message = 'Date of birth cannot be in the future. The child must already be born.';
+        } else if (isoDate < childBirthInput.dataset.min) {
+            message = 'The clinic only accepts children aged 12 and below.';
+        }
+        childBirthInput.setCustomValidity(message);
+        childBirthInput.classList.toggle('is-invalid', !!message);
+        childBirthInput.setAttribute('aria-invalid', message ? 'true' : 'false');
+        childBirthError.textContent = message;
+    }
+    childBirthInput.addEventListener('input', validateChildBirth);
+    childBirthInput.addEventListener('change', validateChildBirth);
+    childBirthInput.addEventListener('blur', validateChildBirth);
+
     function showBookingError(message) {
         bookingFeedback.textContent = message;
         bookingFeedback.hidden = false;
@@ -339,6 +419,7 @@
 
     bookingForm.addEventListener('submit', function (event) {
         bookingFeedback.hidden = true;
+        validateChildBirth();
         if (!bookingForm.checkValidity()) {
             event.preventDefault();
             const invalidField = bookingForm.querySelector('input:invalid, select:invalid, textarea:invalid');

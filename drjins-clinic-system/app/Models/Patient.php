@@ -21,6 +21,7 @@ class Patient extends Model
         'temperature',
         'address', 'barangay', 'municipality', 'province',
         'guardian_name',
+        'guardian_first_name', 'guardian_middle_name', 'guardian_surname',
         'guardian_relationship',
         'contact_number',
         'emergency_contact',

@@ -77,11 +77,18 @@ class QueueController extends Controller
         $data = $request->validate([
             'status' => 'required|in:waiting,in_consultation,left',
         ]);
-        DB::transaction(function () use ($entry, $data) {
+        $input = $request->validate([
+            'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:today',
+            'sex' => 'nullable|in:Male,Female',
+        ]);
+        if ($data['status'] === 'in_consultation') {
+            abort_unless(in_array($request->user()->role, ['doctor', 'admin'], true), 403);
+        }
+        $patientId = DB::transaction(function () use ($entry, $data, $input) {
             $entry = QueueEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
             $allowed = [
                 'waiting' => ['in_consultation', 'left'],
-                'in_consultation' => ['waiting', 'left'],
+                'in_consultation' => ['waiting', 'left', 'in_consultation'],
                 'left' => ['waiting'],
                 'completed' => [],
             ];
@@ -96,18 +103,34 @@ class QueueController extends Controller
                         'status' => 'Activate this patient before continuing the visit.',
                     ]);
                 }
-                $appointment = $entry->appointment;
+                $appointment = $entry->online_appointment_id
+                    ? OnlineAppointment::whereKey($entry->online_appointment_id)->lockForUpdate()->firstOrFail() : null;
                 if ($appointment && (! in_array($appointment->status, ['Approved', 'In Queue'], true) || $appointment->appointment_date !== $entry->visit_date)) {
                     throw ValidationException::withMessages([
                         'status' => 'The linked booking is no longer approved for this visit date. Review the appointment first.',
                     ]);
                 }
+                if ($data['status'] === 'in_consultation') {
+                    app(\App\Services\QueuePatientRegistration::class)->attach($entry, $appointment, $input);
+                    if (! $entry->patient_id || $entry->patient()->value('status') !== 'Active') {
+                        throw ValidationException::withMessages(['status' => 'An active patient record is required to start the check-up.']);
+                    }
+                    if ($appointment) {
+                        $appointment->update(['patient_id' => $entry->patient_id]);
+                    }
+                }
             }
             $entry->update($data + [
-                'started_at' => $data['status'] === 'in_consultation' ? now() : $entry->started_at,
+                'started_at' => $data['status'] === 'in_consultation' ? ($entry->started_at ?? now()) : $entry->started_at,
             ]);
+            return $entry->patient_id;
         });
 
-        return back()->with('success', 'Queue updated. Save the consultation on the patient profile to complete the visit.');
+        if ($data['status'] === 'in_consultation') {
+            return redirect()->route('patients.show', ['patient' => $patientId, 'tab' => 'consultations'])
+                ->with('success', 'Check-up started. Staff can now see In check up in the queue.');
+        }
+
+        return back()->with('success', 'Queue updated. The staff can now see the current check-up status.');
     }
 }

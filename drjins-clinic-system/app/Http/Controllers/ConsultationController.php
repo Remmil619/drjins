@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Consultation;
+use App\Models\GrowthRecord;
 use App\Models\OnlineAppointment;
 use App\Models\Patient;
 use App\Models\QueueEntry;
@@ -13,6 +14,13 @@ use Illuminate\Validation\ValidationException;
 
 class ConsultationController extends Controller
 {
+    public function print(Patient $patient, Consultation $consultation)
+    {
+        abort_unless($consultation->patient_id === $patient->id && ! $consultation->voided_at, 404);
+        return response()->view('consultations.prescription', [
+            'patient' => $patient, 'consultation' => $consultation, 'printConsultation' => true,
+        ])->header('Cache-Control', 'private, no-store');
+    }
     public function prescription(Patient $patient, Consultation $consultation)
     {
         abort_unless(
@@ -28,6 +36,11 @@ class ConsultationController extends Controller
 
     public function store(Request $request, Patient $patient)
     {
+        $vitals = $request->validate([
+            'height_cm' => 'nullable|required_with:weight_kg,temperature_c|numeric|gt:0|max:300',
+            'weight_kg' => 'nullable|required_with:height_cm,temperature_c|numeric|gt:0|max:500',
+            'temperature_c' => 'nullable|numeric|between:25,45',
+        ]);
         $values = $request->validate([
 
             'visit_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today', 'after_or_equal:'.$patient->birthdate],
@@ -45,7 +58,7 @@ class ConsultationController extends Controller
             'request_key' => 'nullable|uuid',
 
         ]);
-        $appointment = DB::transaction(function () use ($patient, $values, $request) {
+        DB::transaction(function () use ($patient, $values, $vitals, $request) {
             Patient::whereKey($patient->id)
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -56,6 +69,14 @@ class ConsultationController extends Controller
                     $same = $existing->patient_id === $patient->id && ! $existing->voided_at;
                     foreach (['visit_date', 'complaint', 'assessment', 'plan', 'prescription', 'follow_up_date'] as $field) {
                         $same = $same && $existing->$field === ($values[$field] ?? null);
+                    }
+                    if (filled($vitals['height_cm'] ?? null)) {
+                        $measurement = GrowthRecord::where('patient_id', $patient->id)->where('measured_on', $values['visit_date'])
+                            ->whereNull('voided_at')->latest('id')->first();
+                        foreach (['height_cm', 'weight_kg', 'temperature_c'] as $field) {
+                            $same = $same && $measurement && ($measurement->$field === null ? null : (float) $measurement->$field)
+                                === (isset($vitals[$field]) ? (float) $vitals[$field] : null);
+                        }
                     }
                     if (! $same) {
                         throw ValidationException::withMessages([
@@ -72,36 +93,27 @@ class ConsultationController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            $patient->consultations()->create($values + [
+            if (filled($vitals['height_cm'] ?? null) && filled($vitals['weight_kg'] ?? null)) {
+                $latest = GrowthRecord::where('patient_id', $patient->id)->where('measured_on', $values['visit_date'])
+                    ->whereNull('voided_at')->latest('id')->first();
+                $same = $latest && (float) $latest->height_cm === (float) $vitals['height_cm']
+                    && (float) $latest->weight_kg === (float) $vitals['weight_kg']
+                    && ($latest->temperature_c === null ? null : (float) $latest->temperature_c)
+                        === (isset($vitals['temperature_c']) ? (float) $vitals['temperature_c'] : null);
+                if (! $same) {
+                    GrowthRecord::create($vitals + [
+                        'patient_id' => $patient->id, 'user_id' => $request->user()->id,
+                        'measured_on' => $values['visit_date'], 'notes' => 'Recorded with consultation.',
+                    ]);
+                }
+            }
+            $visit = $patient->consultations()->create($values + [
                 'user_id' => $request->user()->id,
                 'queue_entry_id' => $queue?->id,
             ]);
-            if (! $queue) {
-                return null;
-            }
-            // Saving the consultation also closes this visit in the queue and portal.
-            $queue->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-            ]);
-            if (! $queue->online_appointment_id) {
-                return null;
-            }
-            $booking = OnlineAppointment::whereKey($queue->online_appointment_id)->lockForUpdate()->firstOrFail();
-            $booking->update([
-                'status' => 'Completed',
-                'staff_response' => 'Your clinic consultation has been completed.',
-                'responded_at' => now(),
-                'sync_pending' => true,
-            ]);
-
-            return $booking;
+            app(\App\Services\ServiceBilling::class)->consultation($visit);
         });
         $message = 'Consultation saved.';
-
-        if ($appointment && ! app(BookingSync::class)->push($appointment)) {
-            $message .= ' Portal status is queued for retry.';
-        }
 
         return redirect()
             ->route('patients.show', [

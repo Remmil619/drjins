@@ -54,6 +54,22 @@ class PatientController extends Controller
 
     public function store(Request $request, ?Patient $patient = null)
     {
+        $birthDate = $request->input('birthdate');
+        if (is_string($birthDate) && preg_match('/^(\d{2})\/(\d{2})\/(\d{2})$/', $birthDate, $parts)) {
+            $year = (int) $parts[3] + ((int) $parts[3] <= 69 ? 2000 : 1900);
+            $request->merge(['birthdate' => sprintf('%04d-%s-%s', $year, $parts[1], $parts[2])]);
+        }
+        if ($request->hasAny(['guardian_first_name', 'guardian_middle_name', 'guardian_surname'])) {
+            $names = $request->validate([
+                'guardian_first_name' => 'required|string|max:80',
+                'guardian_middle_name' => 'nullable|string|max:80',
+                'guardian_surname' => 'required|string|max:80',
+            ]);
+            $request->merge(['guardian_name' => implode(' ', array_filter(array_map(
+                fn ($key) => trim($names[$key] ?? ''),
+                ['guardian_first_name', 'guardian_middle_name', 'guardian_surname']
+            )))]);
+        }
         $validated = $request->validate([
 
             'first_name' => ['required', 'string', 'max:255'],
@@ -67,9 +83,9 @@ class PatientController extends Controller
 
             'sex' => ['required', 'in:Male,Female'],
 
-            'height' => ['nullable', 'string', 'max:50'],
+            'height' => ['nullable', 'required_with:weight,temperature', 'numeric', 'gt:0', 'max:300'],
 
-            'weight' => ['nullable', 'string', 'max:50'],
+            'weight' => ['nullable', 'required_with:height,temperature', 'numeric', 'gt:0', 'max:500'],
 
             'temperature' => ['nullable', 'numeric', 'between:25,45'],
 
@@ -82,6 +98,9 @@ class PatientController extends Controller
             'address' => ['nullable', 'string', 'max:500'],
 
             'guardian_name' => ['required', 'string', 'max:255'],
+            'guardian_first_name' => 'nullable|string|max:80',
+            'guardian_middle_name' => 'nullable|string|max:80',
+            'guardian_surname' => 'nullable|string|max:80',
 
             'guardian_relationship' => ['nullable', 'string', 'max:100'],
 
@@ -97,11 +116,22 @@ class PatientController extends Controller
             $validated['patient_no'] = $this->generatePatientNo();
         }
 
-        if ($patient) {
-            $patient->update($validated);
-        } else {
-            $patient = Patient::create($validated);
-        }
+        $patient = \Illuminate\Support\Facades\DB::transaction(function () use ($patient, $validated, $request) {
+            $record = $patient ?? new Patient;
+            $record->fill($validated);
+            $recordVitals = ! $record->exists || $record->isDirty(['height', 'weight', 'temperature']);
+            $record->save();
+            if ($recordVitals && filled($validated['height'] ?? null) && filled($validated['weight'] ?? null)) {
+                GrowthRecord::create([
+                    'patient_id' => $record->id, 'user_id' => $request->user()->id,
+                    'measured_on' => today()->toDateString(),
+                    'height_cm' => $validated['height'], 'weight_kg' => $validated['weight'],
+                    'temperature_c' => $validated['temperature'] ?? null,
+                    'notes' => 'Recorded by staff in the patient registration form.',
+                ]);
+            }
+            return $record;
+        });
 
         return redirect()
             ->route('patients.show', $patient)
@@ -111,25 +141,39 @@ class PatientController extends Controller
     public function show(Request $request, Patient $patient)
     {
         $request->validate([
-            'tab' => 'nullable|in:consultations,growth,immunizations,alerts,billing',
+            'tab' => 'nullable|in:consultations,growth,immunizations,alerts,billing,history',
         ]);
         $tab = $request->input('tab') ?: 'consultations';
         $patient->load('appointment');
+        $latestVitals = GrowthRecord::where('patient_id', $patient->id)->whereNull('voided_at')
+            ->orderByDesc('measured_on')->orderByDesc('id')->first();
+        $latestVaccination = Immunization::where('patient_id', $patient->id)->whereNull('voided_at')
+            ->orderByDesc('administered_on')->orderByDesc('id')->first();
+        $bookingAllergies = \App\Models\OnlineAppointment::where(function ($query) use ($patient) {
+            $query->where('patient_id', $patient->id);
+            if ($patient->online_appointment_no) {
+                $query->orWhere('appointment_no', $patient->online_appointment_no);
+            }
+        })->whereNotNull('allergies')->orderByDesc('appointment_date')->orderByDesc('id')->get()
+            ->filter(fn ($booking) => filled(trim($booking->allergies)))
+            ->unique(fn ($booking) => mb_strtolower(trim($booking->allergies)));
         $alerts = MedicalAlert::where('patient_id', $patient->id)->whereNull('voided_at')->get();
         $activeQueue = QueueEntry::where('patient_id', $patient->id)->whereDate('visit_date', today())->whereIn('status', ['waiting', 'in_consultation'])->first();
-        $records = match ($tab) {
-            'growth' => GrowthRecord::where('patient_id', $patient->id)->orderByDesc('measured_on')->orderByDesc('id')->paginate(15)->withQueryString(),
-            'immunizations' => Immunization::where('patient_id', $patient->id)->orderByDesc('administered_on')->orderByDesc('id')->paginate(15)->withQueryString(),
-            'alerts' => MedicalAlert::where('patient_id', $patient->id)->latest()->paginate(15)->withQueryString(),
-            'billing' => Charge::with('payments')->where('patient_id', $patient->id)->latest()->paginate(15)->withQueryString(),
-            default => $patient->consultations()->with('author')->paginate(10)->withQueryString(),
-        };
+        if ($activeQueue) {
+            $activeQueue->daily_number = QueueEntry::whereDate('visit_date', $activeQueue->visit_date)
+                ->where('id', '<=', $activeQueue->id)->count();
+        }
+        $consultationRecords = $patient->consultations()->with('author')->paginate(10, ['*'], 'consultations_page')->withQueryString();
+        $growthRecords = GrowthRecord::where('patient_id', $patient->id)->orderByDesc('measured_on')->orderByDesc('id')->paginate(15, ['*'], 'growth_page')->withQueryString();
+        $immunizationRecords = Immunization::where('patient_id', $patient->id)->orderByDesc('administered_on')->orderByDesc('id')->paginate(15, ['*'], 'immunizations_page')->withQueryString();
+        $alertRecords = MedicalAlert::where('patient_id', $patient->id)->latest()->paginate(15, ['*'], 'alerts_page')->withQueryString();
+        $billingRecords = Charge::with('payments')->where('patient_id', $patient->id)->latest()->paginate(15, ['*'], 'billing_page')->withQueryString();
         $fees = Charge::where('patient_id', $patient->id)->whereNull('voided_at')->sum('amount_centavos');
         $paid = Payment::whereNull('voided_at')->whereHas('charge', fn ($query) => $query->where('patient_id', $patient->id)->whereNull('voided_at'))->sum('amount_centavos');
-        $clinicVaccines = $tab === 'immunizations' ? ClinicVaccine::orderBy('name')->get() : collect();
-        $cartCharges = $tab === 'billing' ? Charge::with('payments')->where('patient_id', $patient->id)->whereNull('voided_at')->orderBy('id')->get()->filter(fn ($charge) => $charge->balance_centavos > 0) : collect();
+        $clinicVaccines = ClinicVaccine::orderBy('name')->get();
+        $cartCharges = Charge::with('payments')->where('patient_id', $patient->id)->whereNull('voided_at')->orderBy('id')->get()->filter(fn ($charge) => $charge->balance_centavos > 0);
 
-        return view('patients.show', compact('patient', 'tab', 'alerts', 'activeQueue', 'records', 'fees', 'paid', 'clinicVaccines', 'cartCharges'));
+        return view('patients.show', compact('patient', 'tab', 'alerts', 'bookingAllergies', 'activeQueue', 'consultationRecords', 'growthRecords', 'immunizationRecords', 'alertRecords', 'billingRecords', 'fees', 'paid', 'clinicVaccines', 'cartCharges', 'latestVitals', 'latestVaccination'));
     }
 
     private function generatePatientNo()

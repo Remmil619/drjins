@@ -76,11 +76,19 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Birthdate</label>
+                            @php
+                                $birthdateValue = old('birthdate', $patient->birthdate ?? '');
+                                $birthdateIsValid = preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdateValue)
+                                    && checkdate((int) substr($birthdateValue, 5, 2), (int) substr($birthdateValue, 8, 2), (int) substr($birthdateValue, 0, 4));
+                                $birthdateDisplayValue = $birthdateIsValid
+                                    ? \Carbon\Carbon::createFromFormat('!Y-m-d', $birthdateValue)->format('m/d/y')
+                                    : (old('birthdate') !== null ? old('birthdate') : '');
+                            @endphp
                             <input
-                                type="date"
+                                type="text" placeholder="MM/DD/YY" inputmode="numeric" maxlength="8" pattern="[0-9]{2}/[0-9]{2}/[0-9]{2}"
                                 name="birthdate"
                                 class="form-control"
-                                value="{{ old('birthdate', $patient->birthdate ?? null) }}"
+                                value="{{ $birthdateDisplayValue }}"
                                 required
                             >
                         </div>
@@ -103,11 +111,11 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Height (cm)</label>
                             <input
-                                type="text"
+                                type="number"
                                 name="height"
                                 class="form-control @error('height') is-invalid @enderror"
                                 value="{{ old('height', $patient->height ?? null) }}"
-                                placeholder="Example: 100 cm"
+                                placeholder="Example: 100" min="0.01" max="300" step="0.01"
                             >
 
                             @error('height')
@@ -117,11 +125,11 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Weight (kg)</label>
                             <input
-                                type="text"
+                                type="number"
                                 name="weight"
                                 class="form-control @error('weight') is-invalid @enderror"
                                 value="{{ old('weight', $patient->weight ?? null) }}"
-                                placeholder="Example: 20 kg"
+                                placeholder="Example: 20" min="0.01" max="500" step="0.01"
                             >
 
                             @error('weight')
@@ -166,50 +174,36 @@
                         </div>
                     </div>
                     <div class="mb-4">
-                        @include('patients.address-fields')
+                        @include('patients.registration-address')
                     </div>
                     <h5 class="fw-bold mb-3">Guardian Information</h5>
+                    @if(isset($patient) && !$patient->guardian_first_name)
+                        <p class="small text-muted">Previously recorded guardian: {{ $patient->guardian_name }}. Enter the name in separate fields to update it.</p>
+                    @endif
                     <div class="row">
+                        @foreach(['guardian_first_name' => 'First Name', 'guardian_middle_name' => 'Middle Name (optional)', 'guardian_surname' => 'Last Name'] as $field => $label)
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ $field }}" class="form-label">{{ $label }}</label>
+                                <input id="{{ $field }}" name="{{ $field }}" class="form-control" maxlength="80" value="{{ old($field, $patient->$field ?? '') }}" @required($field !== 'guardian_middle_name')>
+                            </div>
+                        @endforeach
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Guardian Name</label>
-                            <input
-                                type="text"
-                                name="guardian_name"
-                                class="form-control"
-                                value="{{ old('guardian_name', $patient->guardian_name ?? null) }}"
-                                required
-                            >
+                            <label for="guardian_relationship" class="form-label">Relationship to Patient</label>
+                            <select id="guardian_relationship" name="guardian_relationship" class="form-select" required>
+                                <option value="">Choose one</option>
+                                @php($relationships = ['Mother', 'Father', 'Legal guardian', 'Other relative', 'Other'])
+                                @php($selectedRelationship = old('guardian_relationship', $patient->guardian_relationship ?? ''))
+                                @if($selectedRelationship && !in_array($selectedRelationship, $relationships))
+                                    <option selected value="{{ $selectedRelationship }}">{{ $selectedRelationship }}</option>
+                                @endif
+                                @foreach($relationships as $relationship)
+                                    <option value="{{ $relationship }}" @selected($selectedRelationship === $relationship)>{{ $relationship }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Relationship to Patient</label>
-                            <input
-                                type="text"
-                                name="guardian_relationship"
-                                class="form-control"
-                                value="{{ old('guardian_relationship', $patient->guardian_relationship ?? null) }}"
-                                placeholder="Mother, Father, Aunt, Guardian"
-                            >
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Contact Number</label>
-                            <input
-                                type="text"
-                                name="contact_number"
-                                class="form-control"
-                                value="{{ old('contact_number', $patient->contact_number ?? null) }}"
-                                required
-                            >
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Emergency Contact</label>
-                            <input
-                                type="text"
-                                name="emergency_contact"
-                                class="form-control"
-                                value="{{ old('emergency_contact', $patient->emergency_contact ?? null) }}"
-                            >
+                            <label for="contact_number" class="form-label">Contact Number</label>
+                            <input id="contact_number" name="contact_number" type="tel" class="form-control" maxlength="20" value="{{ old('contact_number', $patient->contact_number ?? '') }}" required>
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2">

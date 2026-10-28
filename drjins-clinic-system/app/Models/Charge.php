@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Charge extends Model
 {
-    protected $fillable = ['patient_id', 'user_id', 'charged_on', 'description', 'amount_centavos', 'request_key', 'voided_at', 'void_reason'];
+    protected $fillable = ['patient_id', 'user_id', 'charged_on', 'description', 'amount_centavos', 'request_key', 'voided_at', 'void_reason', 'service_key', 'price_pending'];
 
     public function patient()
     {

@@ -7,13 +7,13 @@
 
             <article class="record-entry {{ $record->voided_at ? 'record-void' : '' }}">
                 <div class="d-flex flex-wrap justify-content-between">
-                    <strong>{{ $record->vaccine }} ï¿½
+                    <strong>{{ $record->vaccine }} &middot;
                         {{ $record->dose }}</strong>
                     <span>{{ $record->administered_on }}</span>
                 </div>
-                <p class="small text-muted mt-2 mb-1">Source: {{ str_replace('_', ' ', $record->source) }} ï¿½ Provider:
-                    {{ $record->provider }}</p>
-                <p class="small mb-1">Lot: {{ $record->lot_number ?: 'Not recorded' }} ï¿½ Expiry:
+                <p class="small text-muted mt-2 mb-1">Source: {{ ['clinic' => 'Given at this clinic', 'external_record' => 'External vaccination record', 'guardian_report' => 'Reported by guardian'][$record->source] ?? $record->source }} &middot; Administered by / Facility:
+                    {{ $record->provider ?: 'Not recorded' }}</p>
+                <p class="small mb-1">Lot number: {{ $record->lot_number ?: 'Not recorded' }} &middot; Expiry date:
                     {{ $record->expiry_date ?: 'Not recorded' }}</p>
                 @if ($record->next_due_on)
                     <p class="mb-1">Next dose due: <strong>{{ $record->next_due_on }}</strong>
@@ -22,7 +22,7 @@
                 @if ($record->reminder_closed_at)
                     <p class="small">Reminder closed: {{ $record->reminder_outcome }}</p>
                 @endif
-                <p class="preserve-lines small">{{ $record->notes }}</p>@include('components.void-record', ['type' => 'immunization'])
+                <p class="preserve-lines small">{{ $record->notes }}</p>@include('pediatric.edit-vaccination')
             </article>
         @empty
             <p class="text-muted py-4">No vaccination history recorded.</p>
@@ -118,19 +118,26 @@
             @endforelse
         </div>
 
-        <details @if ($errors->has('vaccine_name') || $errors->has('available')) open @endif>
-            <summary class="fw-semibold">Manage clinic vaccines</summary>
+        <details id="vaccine-manager" data-restore="{{ session('keep_vaccine_manager') ? 'true' : 'false' }}" @if(session('keep_vaccine_manager') || old('vaccine_manager') || $errors->has('vaccine_name') || $errors->has('available') || $errors->has('price')) open @endif>
+            <summary class="fw-semibold">Manage clinic vaccines</summary>@if(session('keep_vaccine_manager'))<div class="alert alert-success mt-3" role="status">{{ session('success') }}</div>@endif @if(old('vaccine_manager') && $errors->any())<div class="alert alert-danger mt-3" role="alert">{{ $errors->first() }}</div>@endif
             <p class="small text-muted mt-3">This list is shared across all patients. Mark a vaccine available after
                 confirming clinic stock.</p>
-            <ul class="list-group list-group-flush mb-3">
+            <ul class="vaccine-management-list">
                 @foreach ($clinicVaccines as $vaccine)
-                    <li class="list-group-item px-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <li class="vaccine-management-row">
                         <span>{{ $vaccine->name }} <small class="text-muted">&mdash;
                                 {{ $vaccine->available ? 'Available' : 'Unavailable' }}</small>
+                            <small class="d-block">{{ $vaccine->price_centavos === null ? 'Price not set' : 'PHP ' . number_format($vaccine->price_centavos / 100, 2) }}</small>
                         </span>
+                        <form method="POST" action="{{ route('clinic-vaccines.update', [$patient, $vaccine]) }}" class="vaccine-price-form">
+                            @csrf @method('PATCH') <input type="hidden" name="vaccine_manager" value="1">
+                            <input type="hidden" name="vaccine_price_id" value="{{ $vaccine->id }}"><div><label for="vaccine-price-{{ $vaccine->id }}" class="form-label small">Price per dose (PHP)</label>
+                            <input id="vaccine-price-{{ $vaccine->id }}" name="price" type="number" min="0" max="9999999.99" step="0.01" class="form-control" required value="{{ old('vaccine_price_id') == $vaccine->id ? old('price') : ($vaccine->price_centavos === null ? '' : number_format($vaccine->price_centavos / 100, 2, '.', '')) }}"></div>
+                            <button class="btn btn-primary btn-sm">Save price</button>
+                        </form>
 
                         <form method="POST" action="{{ route('clinic-vaccines.update', [$patient, $vaccine]) }}">
-                            @csrf @method('PATCH')
+                            @csrf @method('PATCH') <input type="hidden" name="vaccine_manager" value="1">
                             <input
                                 type="hidden"
                                 name="available"
@@ -144,7 +151,7 @@
                 @endforeach
             </ul>
 
-            <form method="POST" action="{{ route('clinic-vaccines.store', $patient) }}">
+            <form method="POST" action="{{ route('clinic-vaccines.store', $patient) }}" class="vaccine-add-form"><h4 class="h6">Add a clinic vaccine</h4><input type="hidden" name="vaccine_manager" value="1">
                 @csrf
                 <label for="vaccine_name" class="form-label">Add vaccine name</label>
                 <input
@@ -176,7 +183,8 @@
                     <label for="new_vaccine_available" class="form-check-label">Confirmed available at this
                         clinic</label>
                 </div>
-                <button class="btn btn-primary">Add vaccine</button>
+
+                <div class="mt-3"><label for="new-vaccine-price" class="form-label">Price per dose (PHP, optional)</label><input id="new-vaccine-price" name="price" type="number" min="0" max="9999999.99" step="0.01" class="form-control" value="{{ old('vaccine_price_id') ? '' : old('price') }}"></div><button class="btn btn-primary mt-3">Add vaccine</button>
             </form>
         </details>
     </div>

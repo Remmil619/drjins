@@ -38,13 +38,13 @@
                 </tbody>
             </table>
         </div>
-        @if ($patient->height || $patient->weight || $patient->temperature)
+        @if (!$latestVitals && ($patient->height || $patient->weight || $patient->temperature))
             <p class="small text-muted">Legacy profile values (measurement date not recorded): height
                 {{ $patient->height ?: '�' }}, weight {{ $patient->weight ?: '�' }}, temperature
                 {{ $patient->temperature ?: '�' }}. These are not included in dated growth history.</p>
         @endif
 
-        <details class="record-form mt-3" @if ($errors->any()) open @endif>
+        <details class="record-form mt-3" @if ($errors->any() || $latestVitals?->measured_on === today()->toDateString()) open @endif>
             <summary class="fw-semibold">+ Record measurements</summary>
 
             <form
@@ -78,7 +78,7 @@
                                 id="{{ $key }}"
                                 name="{{ $key }}"
                                 class="form-control"
-                                value="{{ old($key) }}"
+                                value="{{ old($key, $latestVitals?->measured_on === today()->toDateString() ? $latestVitals->$key : null) }}"
                                 @required(in_array($key, ['weight_kg', 'height_cm']))
                             >
                         </div>

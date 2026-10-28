@@ -12,6 +12,17 @@ use Illuminate\Validation\ValidationException;
 
 class BillingController extends Controller
 {
+    public function statement(Patient $patient)
+    {
+        $charges = Charge::where('patient_id', $patient->id)->whereNull('voided_at')
+            ->with(['payments' => fn ($query) => $query->whereNull('voided_at')->orderBy('paid_on')->orderBy('id')])
+            ->orderBy('charged_on')->orderBy('id')->get();
+        $fees = $charges->sum('amount_centavos');
+        $paid = $charges->sum(fn ($charge) => $charge->payments->sum('amount_centavos'));
+
+        return view('billing.statement', compact('patient', 'charges', 'fees', 'paid'));
+    }
+
     private function centavos(string $amount): int
     {
         // Keep money in whole centavos so decimal rounding cannot change a balance.
@@ -39,7 +50,7 @@ class BillingController extends Controller
         ], 'amount_centavos')
             ->when($search, fn ($q) => $q->whereHas('patient', fn ($p) => $p->where('patient_no', 'like', "%$search%")->orWhere('first_name', 'like', "%$search%")->orWhere('last_name', 'like', "%$search%")))
             ->when($status === 'void', fn ($q) => $q->whereNotNull('voided_at'))
-            ->when(in_array($status, ['unpaid', 'paid']), fn ($q) => $q->whereNull('voided_at')->whereRaw('amount_centavos '.($status === 'paid' ? '=' : '>').' (select coalesce(sum(payments.amount_centavos),0) from payments where payments.charge_id = charges.id and payments.voided_at is null)'))
+            ->when(in_array($status, ['unpaid', 'paid']), fn ($q) => $q->whereNull('voided_at')->where(fn ($balance) => $balance->whereRaw('amount_centavos '.($status === 'paid' ? '=' : '>').' (select coalesce(sum(payments.amount_centavos),0) from payments where payments.charge_id = charges.id and payments.voided_at is null)')->when($status === 'unpaid', fn ($pending) => $pending->orWhere('price_pending', true)))->when($status === 'paid', fn ($priced) => $priced->where('price_pending', false)))
             ->latest()->paginate(20)->withQueryString();
 
         return view('billing.index', compact('charges', 'search', 'status'));
@@ -76,6 +87,21 @@ class BillingController extends Controller
         return back()->with('success', 'Charge saved.');
     }
 
+    public function price(Request $request, Patient $patient, Charge $charge)
+    {
+        abort_unless($charge->patient_id === $patient->id, 404);
+        $data = $request->validate(['amount' => ['required', 'regex:/^\d{1,7}(\.\d{1,2})?$/']]);
+        $amount = $this->centavos($data['amount']);
+        DB::transaction(function () use ($charge, $amount) {
+            $charge = Charge::whereKey($charge->id)->lockForUpdate()->firstOrFail();
+            if (! $charge->price_pending || $charge->voided_at || $charge->paid_centavos > 0) {
+                throw ValidationException::withMessages(['amount' => 'This fee has already been priced or voided. Refresh the record.']);
+            }
+            $charge->update(['amount_centavos' => $amount, 'price_pending' => false]);
+        });
+        return back()->with('success', 'Service fee saved.');
+    }
+
     public function payment(Request $request, Charge $charge)
     {
         $data = $request->validate([
@@ -98,7 +124,7 @@ class BillingController extends Controller
 
                 return;
             }
-            if ($charge->voided_at || $amount > $charge->balance_centavos) {
+            if ($charge->price_pending || $charge->voided_at || $amount > $charge->balance_centavos) {
                 throw ValidationException::withMessages([
                     'amount' => 'Payment exceeds the outstanding balance or the charge was voided.',
                 ]);
@@ -148,9 +174,9 @@ class BillingController extends Controller
                 return;
             }
             $charges = Charge::where('patient_id', $patient->id)->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
-            if ($charges->count() !== count($ids) || $charges->contains(fn ($charge) => $charge->voided_at || $charge->charged_on > $data['paid_on'])) {
+            if ($charges->count() !== count($ids) || $charges->contains(fn ($charge) => $charge->price_pending || $charge->voided_at || $charge->charged_on > $data['paid_on'])) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Invalid cart or payment date. Refresh the page.',
+                    'amount' => 'Invalid service selection, missing price, or payment date. Refresh the page.',
                 ]);
             }
             $balances = $charges->mapWithKeys(fn ($charge) => [
@@ -158,7 +184,7 @@ class BillingController extends Controller
             ]);
             if ($amount > $balances->sum()) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Payment exceeds the current cart balance.',
+                    'amount' => 'Payment exceeds the current outstanding balance.',
                 ]);
             }
             // Apply partial payments to the selected charges in their original order.
@@ -191,7 +217,7 @@ class BillingController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Cart payment recorded.');
+        return back()->with('success', 'Payment recorded.');
     }
 
     public function void(Request $request, string $type, int $record)

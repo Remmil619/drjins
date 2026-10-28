@@ -39,7 +39,7 @@ class BillingCartTest extends TestCase
         $this->get(route('patients.show', [
             $patient,
             'tab' => 'billing',
-        ]))->assertOk()->assertSee('Billing cart')->assertSee('850.00')->assertSee('Pay cart')->assertDontSee('+ Record payment');
+        ]))->assertOk()->assertSee('Services &amp; payments', false)->assertSee('850.00')->assertSee('Record payment')->assertDontSee('+ Record payment');
         $data = [
             'charge_ids' => $charges->pluck('id')->all(),
             'amount' => '600.00',
@@ -52,6 +52,9 @@ class BillingCartTest extends TestCase
         $this->assertSame(25000, $charges[1]->fresh()->balance_centavos);
         $this->post(route('billing.checkout', $patient), $data)->assertSessionHasNoErrors();
         $this->assertSame(2, Payment::count());
+        $this->get(route('billing.print', $patient))->assertOk()
+            ->assertSee('Print / Save as PDF')->assertSee('CART-1')
+            ->assertSee('PHP 850.00')->assertSee('PHP 600.00')->assertSee('PHP 250.00');
         $this->post(route('billing.checkout', $patient), array_merge($data, [
             'amount' => '700.00',
         ]))->assertSessionHasErrors();
@@ -66,6 +69,6 @@ class BillingCartTest extends TestCase
         $this->get(route('patients.show', [
             $patient,
             'tab' => 'billing',
-        ]))->assertOk()->assertSee('Your cart is empty.');
+        ]))->assertOk()->assertSee('No priced services awaiting payment.');
     }
 }

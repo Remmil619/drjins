@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Models\QueueEntry;
 use App\Observers\RecordObserver;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Gate::define('register-users', fn (\App\Models\User $user) => $user->role === 'admin');
         Paginator::useBootstrapFive();
         foreach ([
             Patient::class, OnlineAppointment::class, Consultation::class,

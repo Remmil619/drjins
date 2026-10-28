@@ -32,6 +32,40 @@ class ClinicWebsiteTest extends TestCase
         ], $overrides);
     }
 
+    public function test_child_birth_date_rejects_future_dates_and_children_aged_thirteen(): void
+    {
+        foreach (['2026-09-25', '2013-09-24', '2010-01-01', '2026-02-30'] as $birthDate) {
+            $this->from('/book-appointment')->post('/book-appointment', $this->booking([
+                'child_date_of_birth' => $birthDate,
+            ]))->assertSessionHasErrors('child_date_of_birth');
+        }
+        $this->assertDatabaseCount('appointments', 0);
+        $this->get('/book-appointment')->assertSee('id="childBirthError"', false)
+            ->assertSee('min="2013-09-25"', false)->assertSee('max="2026-09-24"', false);
+    }
+
+    public function test_child_birth_date_accepts_newborns_and_children_until_their_thirteenth_birthday(): void
+    {
+        foreach (['2026-09-24', '2014-09-24', '2013-09-25'] as $birthDate) {
+            $this->post('/book-appointment', $this->booking([
+                'child_date_of_birth' => $birthDate,
+            ]))->assertSessionHasNoErrors();
+            $this->assertDatabaseHas('appointments', ['child_date_of_birth' => $birthDate]);
+            Appointment::query()->delete();
+        }
+    }
+
+    public function test_birth_date_accepts_month_day_two_digit_year_format(): void
+    {
+        $this->post('/book-appointment', $this->booking(['child_date_of_birth' => '01/15/20']))
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('appointments', ['child_date_of_birth' => '2020-01-15']);
+        foreach (['02/30/20', '09/25/26', '09/24/13', '15/01/20'] as $birthDate) {
+            $this->post('/book-appointment', $this->booking(['child_date_of_birth' => $birthDate]))
+                ->assertSessionHasErrors('child_date_of_birth');
+        }
+    }
+
     public function test_public_pages_and_navigation_are_available(): void
     {
         foreach (['/', '/services', '/patient-hub', '/about', '/contact', '/privacy', '/book-appointment', '/check-status'] as $path) {
@@ -78,7 +112,7 @@ class ClinicWebsiteTest extends TestCase
     public function test_invalid_past_closed_and_out_of_window_slots_are_rejected(): void
     {
         $this->post('/book-appointment', $this->booking(['appointment_time' => 'nonsense']))->assertSessionHasErrors('appointment_time');
-        $this->post('/book-appointment', $this->booking(['appointment_date' => '2026-10-15']))->assertSessionHasErrors('appointment_date');
+        $this->post('/book-appointment', $this->booking(['appointment_date' => '2026-10-22']))->assertSessionHasErrors('appointment_date');
         $this->post('/book-appointment', $this->booking(['appointment_date' => '2026-09-27']))->assertSessionHasErrors('appointment_time');
         $this->post('/book-appointment', $this->booking(['consent' => '0']))->assertSessionHasErrors('consent');
         $this->post('/book-appointment', $this->booking(['contact_number' => 'abc']))->assertSessionHasErrors('contact_number');
@@ -233,10 +267,20 @@ class ClinicWebsiteTest extends TestCase
             $today = collect($dates)->firstWhere('date', '2026-09-24');
             $sunday = collect($dates)->firstWhere('date', '2026-09-27');
 
-            return count($dates) === 14
+            return count($dates) === 28
+                && $dates[27]['date'] === '2026-10-21'
                 && collect($today['slots'])->firstWhere('time', '08:00')['available'] === false
                 && collect($today['slots'])->firstWhere('time', '08:30')['available'] === true
                 && $sunday['clickable'] === false;
         });
+    }
+
+    public function test_booking_accepts_last_day_of_four_weeks_and_rejects_dates_beyond_it(): void
+    {
+        $this->post('/book-appointment', $this->booking(['appointment_date' => '2026-10-21']))
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('appointments', ['appointment_date' => '2026-10-21']);
+        $this->post('/book-appointment', $this->booking(['appointment_date' => '2026-10-22']))
+            ->assertSessionHasErrors('appointment_date');
     }
 }
