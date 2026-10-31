@@ -16,7 +16,7 @@
             @forelse($cartCharges as $charge)
                 <tr>
                     <td>{{ $charge->description }}</td>
-                    <td>{{ $charge->charged_on }}</td>
+                    <td>{{ \Carbon\Carbon::parse($charge->charged_on)->format('d M Y') }}</td>
                     <td class="text-end">PHP {{ number_format($charge->amount_centavos / 100, 2) }}</td>
                     <td class="text-end">PHP {{ number_format($charge->balance_centavos / 100, 2) }}</td>
                 </tr>

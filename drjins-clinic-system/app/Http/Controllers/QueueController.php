@@ -111,8 +111,16 @@ class QueueController extends Controller
                     ]);
                 }
                 if ($data['status'] === 'in_consultation') {
-                    app(\App\Services\QueuePatientRegistration::class)->attach($entry, $appointment, $input);
-                    if (! $entry->patient_id || $entry->patient()->value('status') !== 'Active') {
+                    if (!$entry->patient_id && $appointment) {
+                        $details = \Illuminate\Support\Facades\Validator::make([
+                            'birthdate' => $input['birthdate'] ?? $appointment->child_date_of_birth,
+                            'sex' => $input['sex'] ?? $appointment->child_sex,
+                        ], ['birthdate' => 'required|date_format:Y-m-d|before_or_equal:today', 'sex' => 'required|in:Male,Female'])->validate();
+                        if (isset($details['birthdate'])) $appointment->child_date_of_birth = $details['birthdate'];
+                        if (isset($details['sex'])) $appointment->child_sex = $details['sex'];
+                        $appointment->save();
+                    }
+                    if ($entry->patient_id && $entry->patient()->value('status') !== 'Active') {
                         throw ValidationException::withMessages(['status' => 'An active patient record is required to start the check-up.']);
                     }
                     if ($appointment) {
@@ -127,6 +135,7 @@ class QueueController extends Controller
         });
 
         if ($data['status'] === 'in_consultation') {
+            if (!$patientId) return redirect()->route('consultation-workflow.booking', $entry);
             return redirect()->route('patients.show', ['patient' => $patientId, 'tab' => 'consultations'])
                 ->with('success', 'Check-up started. Staff can now see In check up in the queue.');
         }

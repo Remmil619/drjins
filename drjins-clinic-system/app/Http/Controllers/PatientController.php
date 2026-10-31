@@ -10,6 +10,7 @@ use App\Models\MedicalAlert;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\QueueEntry;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -55,9 +56,8 @@ class PatientController extends Controller
     public function store(Request $request, ?Patient $patient = null)
     {
         $birthDate = $request->input('birthdate');
-        if (is_string($birthDate) && preg_match('/^(\d{2})\/(\d{2})\/(\d{2})$/', $birthDate, $parts)) {
-            $year = (int) $parts[3] + ((int) $parts[3] <= 69 ? 2000 : 1900);
-            $request->merge(['birthdate' => sprintf('%04d-%s-%s', $year, $parts[1], $parts[2])]);
+        if (is_string($birthDate) && preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $birthDate, $parts)) {
+            $request->merge(['birthdate' => sprintf('%04d-%02d-%02d', (int) $parts[3], (int) $parts[2], (int) $parts[1])]);
         }
         if ($request->hasAny(['guardian_first_name', 'guardian_middle_name', 'guardian_surname'])) {
             $names = $request->validate([
@@ -171,9 +171,11 @@ class PatientController extends Controller
         $fees = Charge::where('patient_id', $patient->id)->whereNull('voided_at')->sum('amount_centavos');
         $paid = Payment::whereNull('voided_at')->whereHas('charge', fn ($query) => $query->where('patient_id', $patient->id)->whereNull('voided_at'))->sum('amount_centavos');
         $clinicVaccines = ClinicVaccine::orderBy('name')->get();
+        $doctors = User::where('role', 'doctor')->orderBy('name')->get();
+        $clinicVaccines = $clinicVaccines->filter(fn ($vaccine) => $vaccine->available || $immunizationRecords->getCollection()->contains('vaccine', $vaccine->name))->values();
         $cartCharges = Charge::with('payments')->where('patient_id', $patient->id)->whereNull('voided_at')->orderBy('id')->get()->filter(fn ($charge) => $charge->balance_centavos > 0);
 
-        return view('patients.show', compact('patient', 'tab', 'alerts', 'bookingAllergies', 'activeQueue', 'consultationRecords', 'growthRecords', 'immunizationRecords', 'alertRecords', 'billingRecords', 'fees', 'paid', 'clinicVaccines', 'cartCharges', 'latestVitals', 'latestVaccination'));
+        return view('patients.show', compact('patient', 'tab', 'alerts', 'bookingAllergies', 'activeQueue', 'consultationRecords', 'growthRecords', 'immunizationRecords', 'alertRecords', 'billingRecords', 'fees', 'paid', 'clinicVaccines', 'doctors', 'cartCharges', 'latestVitals', 'latestVaccination'));
     }
 
     private function generatePatientNo()

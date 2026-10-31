@@ -8,7 +8,15 @@
         @foreach(['vaccine' => ['Vaccine name', 150], 'dose' => ['Dose', 50], 'provider' => ['Administered by / Facility', 150], 'lot_number' => ['Lot number (optional)', 100]] as $field => [$label, $max])
             <div class="col-md-6">
                 <label for="edit-{{ $field }}-{{ $record->id }}" class="form-label">{{ $label }}</label>
-                <input id="edit-{{ $field }}-{{ $record->id }}" name="{{ $field }}" class="form-control" maxlength="{{ $max }}" value="{{ $editing ? old($field) : $record->$field }}" @required($field !== 'lot_number') @if($field === 'vaccine') list="common-vaccines" @endif>
+                @if($field === 'vaccine')
+                    <select id="edit-vaccine-{{ $record->id }}" name="vaccine" class="form-select" required><option value="">Select vaccine</option>@foreach($clinicVaccines->where('available', true) as $vaccine)<option value="{{ $vaccine->name }}" @selected(($editing ? old('vaccine') : $record->vaccine) === $vaccine->name)>{{ $vaccine->name }}</option>@endforeach</select>
+                @elseif($field === 'dose')
+                    <select id="edit-dose-{{ $record->id }}" name="dose" class="form-select" required><option value="">Select dose</option>@foreach(['1st', '2nd', '3rd', '4th'] as $dose)<option value="{{ $dose }}" @selected(($editing ? old('dose') : $record->dose) === $dose)>{{ $dose }}</option>@endforeach</select>
+                @elseif($field === 'provider')
+                    <select id="edit-provider-{{ $record->id }}" name="provider" class="form-select" required><option value="">Select doctor</option>@foreach($doctors as $doctor)<option value="{{ $doctor->name }}" @selected(($editing ? old('provider') : $record->provider) === $doctor->name)>{{ $doctor->name }}</option>@endforeach</select>
+                @else
+                    <input id="edit-{{ $field }}-{{ $record->id }}" name="{{ $field }}" class="form-control" maxlength="{{ $max }}" value="{{ $editing ? old($field) : $record->$field }}">
+                @endif
             </div>
         @endforeach
         <div class="col-md-6">

@@ -2,7 +2,7 @@
     <legend class="h6">Address</legend>
     @foreach(['province' => 'Province', 'municipality' => 'Municipality / City', 'barangay' => 'Barangay'] as $field => $label)
         <div class="col-md-4">
-            <label for="guardian_{{ $field }}" class="form-label">{{ $label }}</label>
+            <label for="guardian_{{ $field }}" class="form-label">{{ $label }} <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
             <select id="guardian_{{ $field }}" name="{{ $field }}" class="form-select" data-selected="{{ old($field, $patient->$field ?? '') }}" required @disabled($field !== 'province')>
                 <option value="">{{ $field === 'province' ? 'Loading provinces…' : 'Select the address above first' }}</option>
             </select>

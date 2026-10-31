@@ -10,7 +10,7 @@
     </section>
     <div class="container">@include('components.feedback')
 
-        <form class="d-flex flex-wrap gap-3 align-items-end mb-4" method="GET">
+        <form data-auto-filter class="auto-filter-bar d-flex flex-wrap gap-3 align-items-end mb-4" method="GET">
             <div>
                 <label for="from" class="form-label">From</label>
                 <input
@@ -31,7 +31,7 @@
                     value="{{ $to }}"
                 >
             </div>
-            <button class="btn btn-primary">Generate</button>
+            
             <button
                 type="button"
                 class="btn btn-outline-primary"

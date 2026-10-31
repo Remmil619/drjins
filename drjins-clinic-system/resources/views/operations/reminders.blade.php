@@ -10,7 +10,7 @@
     </section>
     <div class="container">@include('components.feedback')
 
-        <form method="GET" class="d-flex flex-wrap gap-3 align-items-end mb-4">
+        <form data-auto-filter method="GET" class="auto-filter-bar d-flex flex-wrap gap-3 align-items-end mb-4">
             <div>
                 <label for="through" class="form-label">Show open reminders due on or before</label>
                 <input
@@ -21,7 +21,7 @@
                     value="{{ $through }}"
                 >
             </div>
-            <button class="btn btn-primary">Update list</button>
+            
         </form>
         <p class="small text-muted">This worklist does not send SMS or reserve appointment slots. Closing a reminder records
             an administrative outcome; it does not record a consultation or vaccine dose.</p>
@@ -45,7 +45,7 @@
                                         <td>
                                             <span
                                                 class="{{ $entry->$dateField < today()->toDateString() ? 'text-danger fw-bold' : '' }}"
-                                            >{{ $entry->$dateField }}</span>
+                                            >{{ \Carbon\Carbon::parse($entry->$dateField)->format('d M Y') }}</span>
                                         </td>
                                         <td>
                                             <a

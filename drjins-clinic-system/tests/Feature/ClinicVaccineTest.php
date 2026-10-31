@@ -41,7 +41,7 @@ class ClinicVaccineTest extends TestCase
             $patient,
             'tab' => 'immunizations',
         ]))->assertOk();
-        $page->assertSee('<option value="Test vaccine">', false)->assertDontSee('<option value="BCG">', false);
+        $page->assertSee('<option value="Test vaccine"', false)->assertDontSee('<option value="BCG"', false);
         $this->post(route('clinic-vaccines.store', $patient), [
             'vaccine_name' => 'test vaccine',
             'available' => 1,
@@ -52,7 +52,7 @@ class ClinicVaccineTest extends TestCase
         $this->get(route('patients.show', [
             $patient,
             'tab' => 'immunizations',
-        ]))->assertOk()->assertDontSee('<option value="Test vaccine">', false);
+        ]))->assertOk()->assertDontSee('<option value="Test vaccine" ', false);
         $this->assertFalse($vaccine->fresh()->available);
     }
 

@@ -16,7 +16,7 @@
     <link href="{{ asset('css/workspace.css') }}?v={{ filemtime(public_path('css/workspace.css')) }}" rel="stylesheet">
 </head>
 
-<body>
+<body class="staff-workspace" data-theme="{{ \App\Models\ClinicSetting::theme() }}">
     <a href="#main-content" class="skip-link">Skip to content</a>
     <div class="utility-bar">
         <div class="container">Care close to home. Abuyog, Leyte <span class="float-end">Staff workspace</span>
@@ -34,6 +34,18 @@
         </small>
     </footer>
 
+    <div class="confirmation-overlay" id="confirmationCard" hidden>
+        <section class="confirmation-card" role="dialog" aria-modal="true" aria-labelledby="confirmationCardTitle" aria-describedby="confirmationCardMessage">
+                <div class="confirmation-icon" aria-hidden="true">?</div>
+                <h2 class="h4 mb-2" id="confirmationCardTitle">Please confirm</h2>
+                <p class="text-muted mb-4" id="confirmationCardMessage">Are you sure you want to continue?</p>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-confirm-cancel>Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmationCardAccept">Confirm</button>
+                </div>
+        </section>
+    </div>
+
     <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 
     <script>
@@ -44,6 +56,9 @@
         }
     </script>
     <script src="{{ asset('js/uppercase-inputs.js') }}" defer></script>
+    <script src="{{ asset('js/auto-filters.js') }}?v={{ filemtime(public_path('js/auto-filters.js')) }}" defer></script>
+    <script src="{{ asset('js/date-format.js') }}?v={{ filemtime(public_path('js/date-format.js')) }}" defer></script>
+    <script src="{{ asset('js/confirmation-card.js') }}?v={{ filemtime(public_path('js/confirmation-card.js')) }}" defer></script>
 </body>
 
 </html>

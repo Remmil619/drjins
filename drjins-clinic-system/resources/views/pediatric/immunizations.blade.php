@@ -9,14 +9,14 @@
                 <div class="d-flex flex-wrap justify-content-between">
                     <strong>{{ $record->vaccine }} &middot;
                         {{ $record->dose }}</strong>
-                    <span>{{ $record->administered_on }}</span>
+                    <span>{{ \Carbon\Carbon::parse($record->administered_on)->format('d M Y') }}</span>
                 </div>
                 <p class="small text-muted mt-2 mb-1">Source: {{ ['clinic' => 'Given at this clinic', 'external_record' => 'External vaccination record', 'guardian_report' => 'Reported by guardian'][$record->source] ?? $record->source }} &middot; Administered by / Facility:
                     {{ $record->provider ?: 'Not recorded' }}</p>
                 <p class="small mb-1">Lot number: {{ $record->lot_number ?: 'Not recorded' }} &middot; Expiry date:
-                    {{ $record->expiry_date ?: 'Not recorded' }}</p>
+                    {{ $record->expiry_date ? \Carbon\Carbon::parse($record->expiry_date)->format('d M Y') : 'Not recorded' }}</p>
                 @if ($record->next_due_on)
-                    <p class="mb-1">Next dose due: <strong>{{ $record->next_due_on }}</strong>
+                    <p class="mb-1">Next dose due: <strong>{{ \Carbon\Carbon::parse($record->next_due_on)->format('d M Y') }}</strong>
                     </p>
                 @endif
                 @if ($record->reminder_closed_at)
@@ -41,6 +41,28 @@
                     @foreach (['vaccine' => ['Vaccine name', 150], 'dose' => ['Dose / series label', 50], 'provider' => ['Administering provider / facility', 150], 'lot_number' => ['Lot number (if known)', 100]] as $field => [$label, $max])
                         <div class="col-md-6">
                             <label for="{{ $field }}" class="form-label">{{ $label }}</label>
+                            @if ($field === 'vaccine')
+                                <select id="vaccine" name="vaccine" class="form-select" required>
+                                    <option value="">Select vaccine</option>
+                                    @foreach ($clinicVaccines->where('available', true) as $vaccine)
+                                        <option value="{{ $vaccine->name }}" data-dose-count="{{ $vaccine->dose_count }}" data-interval="{{ $vaccine->dose_interval_months }}" @selected(old('vaccine') === $vaccine->name)>{{ $vaccine->name }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif ($field === 'dose')
+                                <select id="dose" name="dose" class="form-select" required>
+                                    <option value="">Select dose</option>
+                                    @foreach (['1st', '2nd', '3rd', '4th'] as $dose)
+                                        <option value="{{ $dose }}" @selected(old('dose') === $dose)>{{ $dose }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif ($field === 'provider')
+                                <select id="provider" name="provider" class="form-select" required>
+                                    <option value="">Select doctor</option>
+                                    @foreach ($doctors as $doctor)
+                                        <option value="{{ $doctor->name }}" @selected(old('provider') === $doctor->name)>{{ $doctor->name }}</option>
+                                    @endforeach
+                                </select>
+                            @else
                             <input
                                 id="{{ $field }}"
                                 name="{{ $field }}"
@@ -50,6 +72,7 @@
                                 value="{{ old($field) }}"
                                 @required($field !== 'lot_number')
                             >
+                            @endif
                         </div>
                     @endforeach
                     <div class="col-md-6">
@@ -94,17 +117,16 @@
         </details>
     </div>
 </div>
-<datalist id="common-vaccines">
-    @foreach ($clinicVaccines->where('available', true) as $vaccine)
-        <option value="{{ $vaccine->name }}">
-        </option>
-    @endforeach
-</datalist>
-<p class="small text-muted mt-2">Vaccine name suggestions show only vaccines marked available at this clinic. You may
-    type another name when recording a previous or external vaccination.</p>
+<script>
+(() => { const vaccine=document.getElementById('vaccine'), dose=document.getElementById('dose'), given=document.getElementById('administered_on'), next=document.getElementById('next_due_on'); if (!vaccine||!dose||!given||!next) return; const update=()=>{const o=vaccine.selectedOptions[0], n=parseInt(dose.value), max=parseInt(o?.dataset.doseCount||1), m=parseInt(o?.dataset.interval||0); if(max>1&&m&&n<max&&given.value){const d=new Date(given.value+'T00:00:00'); d.setMonth(d.getMonth()+m); next.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;} else next.value=''; next.dispatchEvent(new Event('change', {bubbles:true}));}; [vaccine,dose,given].forEach(e=>e.addEventListener('change',update)); update(); })();
+</script>
+<p class="small text-muted mt-2">Only vaccines marked available and doctor accounts registered in Accounts are listed here.</p>
 <div class="card clinic-card mt-3">
     <div class="card-body p-4">
-        <h3 class="h5">Available clinic vaccines</h3>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h3 class="h5 mb-0">Available clinic vaccines</h3>
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('vaccines.index') }}">Vaccine management</a>
+        </div>
         <div class="d-flex flex-wrap gap-2 mb-3">
             @forelse($clinicVaccines->where('available', true) as $vaccine)
                 <button

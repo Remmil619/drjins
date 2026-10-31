@@ -11,6 +11,93 @@ body {
     font-family: Arial, sans-serif;
 }
 
+.date-format-control {
+    width: 100%;
+}
+
+.date-format-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+}
+
+.date-format-row > input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.date-format-picker {
+    flex: 0 0 2.8rem;
+    border: 1px solid #cbd8dc;
+    border-radius: 0.55rem;
+    background: #fff;
+    color: #176f69;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.date-format-picker:hover,
+.date-format-picker:focus-visible {
+    border-color: #17847d;
+    background: #f0f8f6;
+}
+
+.date-format-hint {
+    display: block;
+    margin-top: 0.3rem;
+    color: #647783;
+    font-size: 0.78rem;
+}
+
+.date-format-source {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    clip-path: inset(50%) !important;
+    border: 0 !important;
+}
+
+.confirmation-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    background: rgba(15, 34, 39, 0.58);
+}
+
+.confirmation-overlay[hidden] {
+    display: none;
+}
+
+.confirmation-card {
+    width: min(100%, 440px);
+    padding: 2rem;
+    border: 1px solid #d9e5e4;
+    border-radius: 1.1rem;
+    background: #fff;
+    color: var(--clinic-navy);
+    box-shadow: 0 1.25rem 3.5rem rgba(20, 48, 55, 0.2);
+}
+
+.confirmation-icon {
+    display: grid;
+    place-items: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    margin-bottom: 1rem;
+    border-radius: 50%;
+    background: #e5f3f0;
+    color: #147d78;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
 .clinic-navbar {
     background: var(--clinic-blue);
     box-shadow: 0 2px 12px rgba(13, 110, 253, 0.18);

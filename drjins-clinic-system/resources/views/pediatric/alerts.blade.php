@@ -8,7 +8,7 @@
                     {{ $record->description }}</strong>
                 <p class="preserve-lines small mb-1">{{ $record->reaction }}</p>
                 <small class="text-muted">Recorded
-                    {{ $record->created_at->format('M j, Y g:i A') }}</small>@include('components.void-record', ['type' => 'alert'])
+                    {{ $record->created_at->format('d M Y g:i A') }}</small>@include('components.void-record', ['type' => 'alert'])
             </article>
         @empty
             <p class="text-muted py-3">No allergy assessment or medical alerts recorded.</p>

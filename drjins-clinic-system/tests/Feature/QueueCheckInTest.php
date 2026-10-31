@@ -61,6 +61,13 @@ class QueueCheckInTest extends TestCase
         $this->assertSame('in_consultation', $entry->fresh()->status);
         $this->assertNotNull($entry->fresh()->started_at);
         $this->assertNull($entry->fresh()->completed_at);
+        $this->assertNull($entry->fresh()->patient_id);
+        $this->assertDatabaseCount('patients', 0);
+        $this->post(route('consultation-workflow.booking.store', $entry), [
+            'request_key' => (string) \Illuminate\Support\Str::uuid(),
+            'visit_date' => today()->toDateString(), 'complaint' => 'CHECKUP', 'assessment' => 'WELL',
+            'consultation_fee' => '500.00',
+        ])->assertSessionHasNoErrors();
         $patientId = $entry->fresh()->patient_id;
         $this->assertNotNull($patientId);
         $this->assertSame($patientId, $booking->fresh()->patient_id);
@@ -171,10 +178,9 @@ class QueueCheckInTest extends TestCase
         $this->assertDatabaseCount('patients', 0);
         $this->patch(route('queue.update', $entry), [
             'status' => 'in_consultation', 'birthdate' => '2020-01-01', 'sex' => 'Female',
-        ])->assertSessionHasNoErrors()->assertRedirect(route('patients.show', [
-            'patient' => $entry->fresh()->patient_id, 'tab' => 'consultations',
-        ]));
-        $this->assertDatabaseCount('patients', 1);
+        ])->assertSessionHasNoErrors()->assertRedirect(route('consultation-workflow.booking', $entry));
+        $this->assertDatabaseCount('patients', 0);
+        $this->assertSame('2020-01-01', $booking->fresh()->child_date_of_birth);
     }
 
     public function test_portal_allergies_appear_on_the_linked_patient_record_after_checkup_starts(): void
@@ -185,6 +191,12 @@ class QueueCheckInTest extends TestCase
         $doctor = User::factory()->create();
         $doctor->forceFill(['role' => 'doctor'])->save();
         $this->actingAs($doctor)->patch(route('queue.update', $entry), ['status' => 'in_consultation'])->assertSessionHasNoErrors();
+        $this->get(route('consultation-workflow.booking', $entry))->assertSee('Peanuts &lt;script&gt;alert(1)&lt;/script&gt;', false);
+        $this->post(route('consultation-workflow.booking.store', $entry), [
+            'request_key' => (string) \Illuminate\Support\Str::uuid(),
+            'visit_date' => today()->toDateString(), 'complaint' => 'CHECKUP', 'assessment' => 'WELL',
+            'consultation_fee' => '500.00',
+        ])->assertSessionHasNoErrors();
         $patient = $entry->fresh()->patient;
         foreach (['consultations', 'alerts', 'billing'] as $tab) {
             $this->get(route('patients.show', [$patient, 'tab' => $tab]))->assertOk()

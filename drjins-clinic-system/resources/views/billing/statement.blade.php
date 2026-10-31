@@ -10,8 +10,10 @@
         h1 { font-size: 24px; margin-bottom: 8px; }
         h2 { font-size: 20px; }
         .details { margin: 24px 0; line-height: 1.7; }
-        table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; }
-        th, td { padding: 10px 8px; border-bottom: 1px solid #ccd7d9; text-align: left; overflow-wrap: anywhere; }
+        table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 16px 0 24px; }
+        th, td { padding: 11px 10px; border-bottom: 1px solid #e1e9e7; text-align: left; overflow-wrap: anywhere; }
+        th { background: #edf4f2; color: #45616a; font-size: 11px; letter-spacing: .035em; }
+        tbody tr:nth-child(even) { background: #f8faf9; }
         .money { text-align: right; white-space: nowrap; }
         .totals { margin-left: auto; max-width: 340px; }
         .totals p { display: flex; justify-content: space-between; gap: 20px; }
@@ -42,7 +44,7 @@
         <div><strong>Patient:</strong> {{ $patient->full_name }}</div>
         <div><strong>Patient number:</strong> {{ $patient->patient_no }}</div>
         <div><strong>Guardian:</strong> {{ $patient->guardian_name }}</div>
-        <div><strong>Generated:</strong> {{ now()->format('F j, Y g:i A') }}</div>
+        <div><strong>Generated:</strong> {{ now()->format('d M Y g:i A') }}</div>
     </div>
     <table>
         <thead><tr><th>Date</th><th>Service / fee</th><th class="money">Fee (PHP)</th><th class="money">Paid (PHP)</th><th class="money">Balance (PHP)</th></tr></thead>
@@ -50,7 +52,7 @@
             @forelse ($charges as $charge)
                 @php($collected = $charge->payments->sum('amount_centavos'))
                 <tr>
-                    <td>{{ $charge->charged_on }}</td><td>{{ $charge->description }}</td>
+                    <td>{{ \Carbon\Carbon::parse($charge->charged_on)->format('d M Y') }}</td><td>{{ $charge->description }}</td>
                     <td class="money">{{ $charge->price_pending ? 'Needs price' : number_format($charge->amount_centavos / 100, 2) }}</td>
                     <td class="money">{{ number_format($collected / 100, 2) }}</td>
                     <td class="money">{{ $charge->price_pending ? 'Pending' : number_format(($charge->amount_centavos - $collected) / 100, 2) }}</td>

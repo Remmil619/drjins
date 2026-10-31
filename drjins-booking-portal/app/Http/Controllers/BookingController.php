@@ -14,7 +14,7 @@ class BookingController extends Controller
 {
     public function create()
     {
-        $calendarDates = $this->buildCalendarDates();
+        $calendarDates = $this->buildCalendarDates($this->unavailableDates());
 
         return view('booking.create', compact('calendarDates'));
     }
@@ -162,7 +162,34 @@ class BookingController extends Controller
         return config('clinic.schedule');
     }
 
-    private function buildCalendarDates()
+    private function unavailableDates(): array
+    {
+        $url = config('services.booking_api.url');
+        $token = config('services.booking_api.token');
+        if (! is_string($url) || $url === '' || ! is_string($token) || $token === '') {
+            return Cache::get('clinic-unavailable-dates-last-success', []);
+        }
+
+        try {
+            $response = Http::acceptJson()->connectTimeout(1)->timeout(2)
+                ->withHeaders(['X-Booking-Token' => $token])
+                ->get(rtrim($url, '/').'/clinic/unavailable-dates');
+            if (! $response->successful() || ! is_array($response->json('unavailable_dates'))) {
+                return Cache::get('clinic-unavailable-dates-last-success', []);
+            }
+
+            $dates = collect($response->json('unavailable_dates'))
+                ->pluck('date')->filter(fn ($date) => is_string($date) && Carbon::canBeCreatedFromFormat($date, 'Y-m-d'))
+                ->values()->all();
+            Cache::forever('clinic-unavailable-dates-last-success', $dates);
+
+            return $dates;
+        } catch (\Illuminate\Http\Client\ConnectionException $exception) {
+            return Cache::get('clinic-unavailable-dates-last-success', []);
+        }
+    }
+
+    private function buildCalendarDates(array $unavailableDates)
     {
         $dates = [];
         $schedule = $this->clinicSchedule();
@@ -172,6 +199,7 @@ class BookingController extends Controller
             $dateString = $date->toDateString();
             $dayOfWeek = $date->dayOfWeekIso;
             $slots = $schedule[$dayOfWeek] ?? [];
+            $clinicUnavailable = in_array($dateString, $unavailableDates, true);
 
             $bookedTimes = Appointment::whereDate('appointment_date', $dateString)
                 ->whereNotIn('status', ['Declined', 'Cancelled', 'No Show'])
@@ -181,17 +209,20 @@ class BookingController extends Controller
                 })
                 ->toArray();
 
-            $timeSlots = collect($slots)->map(function ($slot) use ($bookedTimes, $dateString) {
+            $timeSlots = collect($slots)->map(function ($slot) use ($bookedTimes, $dateString, $clinicUnavailable) {
                 return [
                     'time' => $slot,
                     'label' => Carbon::createFromFormat('H:i', $slot)->format('h:i A'),
-                    'available' => ! in_array($slot, $bookedTimes) && Carbon::parse($dateString.' '.$slot)->isFuture(),
+                    'available' => ! $clinicUnavailable && ! in_array($slot, $bookedTimes) && Carbon::parse($dateString.' '.$slot)->isFuture(),
                 ];
             })->values()->toArray();
 
             $availableCount = collect($timeSlots)->where('available', true)->count();
 
-            if (count($slots) === 0) {
+            if ($clinicUnavailable) {
+                $status = 'Clinic unavailable';
+                $clickable = false;
+            } elseif (count($slots) === 0) {
                 $status = 'Closed';
                 $clickable = false;
             } elseif ($availableCount === 0) {
@@ -219,6 +250,9 @@ class BookingController extends Controller
 
     private function isSlotAvailable($date, $time)
     {
+        if (in_array($date, $this->unavailableDates(), true)) {
+            return false;
+        }
         if (! Carbon::parse($date.' '.$time)->isFuture()) {
             return false;
         }

@@ -97,3 +97,64 @@ h1,h2,h3,h4 { letter-spacing: -.04em; }
 @media (prefers-reduced-motion: reduce) { .clinic-welcome .welcome-wave,.clinic-welcome .welcome-spark { animation: none !important; } }
 
 .welcome-phone { padding: 13px 22px; border-radius: 10px; background: var(--teal); color: #fff; font-size: 14px; font-weight: 600; cursor: text; }
+
+/* Family photography with solid contrast over the image backgrounds. */
+.home-hero.photo-hero {
+    background: linear-gradient(90deg, #f1f6f3 0%, rgba(241,246,243,.98) 30%, rgba(241,246,243,.85) 44%, rgba(241,246,243,.08) 68%), url('../images/clinic-visit.jpg') center 44% / cover no-repeat;
+    min-height: 590px;
+    display: flex;
+    align-items: center;
+    padding: 90px 0;
+}
+.photo-hero .hero-copy { max-width: 570px; }
+.photo-hero h1 { font-size: clamp(2.7rem,4.6vw,4rem); }
+.photo-hero .intro { max-width: 420px; color: #3e5c5b; }
+.photo-hero .eyebrow { color: #17675f; }
+.family-stories { padding-top: 12px; }
+.care-story { min-height: 490px; border-radius: 24px; overflow: hidden; display: flex; align-items: flex-end; background-size: cover; background-repeat: no-repeat; background-position: center; box-shadow: 0 12px 32px #203f4310; }
+.story-smiles { background-image: linear-gradient(0deg, rgba(10,40,36,.97), rgba(10,40,36,.80) 30%, transparent 75%), url('../images/happy-children.jpg'); }
+.story-wellbeing { background-image: linear-gradient(0deg, rgba(10,40,36,.97), rgba(10,40,36,.80) 30%, transparent 75%), url('../images/children-wellbeing.jpg'); background-position: 54% center; }
+.story-copy { padding: 32px; max-width: 520px; }
+.story-copy .eyebrow { color: #d3eadf; margin-bottom: 12px; }
+.story-copy h3 { color: #fff; font-size: clamp(1.65rem,2.6vw,2rem); }
+.story-copy p { color: #f0f5f2; font-size: 14px; margin: 14px 0 20px; }
+.story-copy .btn-light { background: #fff; color: #204c49; border-color: #fff; }
+.story-copy .btn-light:hover { background: #e0eee7; border-color: #e0eee7; }
+@media (max-width: 991px) {
+    .home-hero.photo-hero { background-position: 60% center; background-image: linear-gradient(90deg, rgba(241,246,243,.98), rgba(241,246,243,.93) 45%, rgba(241,246,243,.30)), url('../images/clinic-visit.jpg'); }
+    .care-story { min-height: 460px; }
+}
+@media (max-width: 575px) {
+    .home-hero.photo-hero { min-height: auto; padding: 270px 0 36px; background-position: center top; background-size: 100% 290px; background-color: #f1f6f3; background-image: linear-gradient(0deg, #f1f6f3, rgba(241,246,243,0) 55%), url('../images/clinic-visit.jpg'); }
+    .photo-hero .hero-copy { padding: 0 8px; }
+    .photo-hero h1 { font-size: 2.7rem; }
+    .photo-hero .eyebrow { font-size: 9px; letter-spacing: .1em; }
+    .story-copy { padding: 24px; }
+    .care-story { min-height: 460px; border-radius: 18px; }
+}
+
+/* Services and appointment promotion. */
+.services-heading { display: flex; justify-content: space-between; align-items: center; gap: 28px; margin-bottom: 32px; }
+.services-heading p { max-width: 610px; margin: 16px 0 0; }
+.services-heading > .btn { flex-shrink: 0; }
+.services-grid .service-card { display: flex; flex-direction: column; padding: 30px; }
+.services-grid .featured-service { border-color: #a6cbbd; background: linear-gradient(145deg, #edf7f0, #fff 75%); }
+.service-category { font-size: 10px; font-weight: 700; letter-spacing: .12em; color: #476962; margin-bottom: 24px; }
+.services-grid .service-card h3 { margin-top: 22px; }
+.service-highlights { padding-left: 18px; margin: 0 0 28px; font-size: 13px; color: var(--muted); }
+.service-highlights li { margin: 8px 0; padding-left: 3px; }
+.service-highlights li::marker { color: var(--teal); }
+.services-grid .service-card > a { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border); }
+.family-stories { padding-top: 64px; }
+.booking-promotion { padding: 64px 0 4px; }
+.promotion-panel { display: flex; align-items: center; justify-content: space-between; gap: 40px; padding: 48px; border-radius: 24px; background: #204c49; }
+.promotion-panel .eyebrow { color: #c4e4d4; }
+.promotion-panel h2 { color: #fff; }
+.promotion-panel p { max-width: 560px; color: #deece7; margin: 18px 0 0; }
+.promotion-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+.promotion-actions .btn { width: 100%; color: #204c49; }
+.promotion-phone { color: #fff; text-underline-offset: 4px; }
+.promotion-phone:hover { color: #d0e9dc; }
+.promotion-actions > span { color: #deece7; font-size: 11px; }
+@media (max-width: 991px) { .services-heading, .promotion-panel { align-items: flex-start; flex-direction: column; } .promotion-actions { align-items: flex-start; } }
+@media (max-width: 575px) { .services-grid .service-card { padding: 24px; } .promotion-panel { padding: 28px 24px; border-radius: 18px; } .promotion-actions { width: 100%; } .booking-promotion { padding-top: 40px; } .family-stories { padding-top: 40px; } }

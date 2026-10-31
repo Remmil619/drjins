@@ -435,7 +435,7 @@
         function formatDate(dateValue) {
             const date = new Date(dateValue + 'T00:00:00');
 
-            return date.toLocaleDateString('en-US', {
+            return date.toLocaleDateString('en-GB', {
                 month: 'long',
                 day: '2-digit',
                 year: 'numeric'
@@ -569,7 +569,9 @@ data-status="No Show">Didn't Show</button></li>
             const modalElement = document.getElementById('patientDetailsModal');
             modalElement.querySelector('form').reset();
             const intake = JSON.parse(button.getAttribute('data-intake') || '{}');
-            modalElement.querySelector('[name="birthdate"]').value = intake.birthdate || '';
+            const birthdate = modalElement.querySelector('[name="birthdate"]');
+            birthdate.value = intake.birthdate || '';
+            birthdate.dispatchEvent(new Event('change', { bubbles: true }));
             modalElement.querySelector('[name="sex"]').value = ['Male', 'Female'].includes(intake.sex) ? intake.sex : '';
             modalElement.querySelector('[name="address"]').value = intake.address || '';
             modalElement.querySelector('[name="emergency_contact"]').value = intake.emergency || '';

@@ -26,7 +26,7 @@
                 </div>
                 <hr>
 
-                <form id="dateForm" class="row g-2 align-items-end">
+                <form id="dateForm" class="auto-filter-bar row g-2 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label">Select Appointment Date</label>
                         <input
@@ -35,15 +35,6 @@
                             class="form-control"
                             value="{{ $selectedDate }}"
                         >
-                    </div>
-                    <div class="col-md-3">
-                        <button
-                            type="button"
-                            id="viewDateButton"
-                            class="btn btn-primary w-100"
-                        >
-                            View Appointments
-                        </button>
                     </div>
                     <div class="col-md-3">
                         <button
@@ -62,7 +53,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h5 class="fw-bold mb-0" id="bookingTitle">
-                            Appointments for {{ date('F d, Y', strtotime($selectedDate)) }}
+                            Appointments for {{ date('d M Y', strtotime($selectedDate)) }}
                         </h5>
                         <small class="text-muted">
                             Total appointments: <span id="bookingTotal">0</span>
@@ -97,7 +88,6 @@
     <script>
         const liveUrl = "{{ route('appointments.live') }}";
         const selectedDateInput = document.getElementById('selectedDate');
-        const viewDateButton = document.getElementById('viewDateButton');
         const todayButton = document.getElementById('todayButton');
         const bookingTableBody = document.getElementById('bookingTableBody');
         const bookingTotal = document.getElementById('bookingTotal');
@@ -133,7 +123,7 @@
         function formatDate(dateValue) {
             const date = new Date(dateValue + 'T00:00:00');
 
-            return date.toLocaleDateString('en-US', {
+            return date.toLocaleDateString('en-GB', {
                 month: 'long',
                 day: '2-digit',
                 year: 'numeric'
@@ -220,9 +210,6 @@
                 });
         }
 
-        viewDateButton.addEventListener('click', function() {
-            loadBookings();
-        });
 
         todayButton.addEventListener('click', function() {
             const today = new Date().toISOString().slice(0, 10);

@@ -24,7 +24,7 @@
     </section>
     <div class="container sales-report">
         @include('components.feedback')
-        <form class="d-flex flex-wrap gap-3 align-items-end mb-4" method="GET">
+        <form data-auto-filter class="auto-filter-bar d-flex flex-wrap gap-3 align-items-end mb-4" method="GET">
             <div>
                 <label for="sales-from" class="form-label">From</label>
                 <input id="sales-from" type="date" name="from" class="form-control" value="{{ $from }}">
@@ -33,7 +33,7 @@
                 <label for="sales-to" class="form-label">Through</label>
                 <input id="sales-to" type="date" name="to" class="form-control" value="{{ $to }}">
             </div>
-            <button class="btn btn-primary">View sales</button>
+            
             <button type="button" class="btn btn-outline-primary" onclick="window.print()">Print</button>
         </form>
         <p class="small text-muted">Showing {{ $from }} through {{ $to }}. Voided payments and payments for voided charges are excluded. Income is counted on the date payment was received.</p>
@@ -65,7 +65,7 @@
                     <h2 class="h5">Sales by day</h2>
                     @forelse($salesByDay as $day => $amount)
                         <div class="d-flex justify-content-between border-bottom py-2">
-                            <span>{{ \Carbon\Carbon::parse($day)->format('M j, Y') }}</span>
+                            <span>{{ \Carbon\Carbon::parse($day)->format('d M Y') }}</span>
                             <strong>PHP {{ number_format($amount / 100, 2) }}</strong>
                         </div>
                     @empty
@@ -96,7 +96,7 @@
                     <tbody>
                         @forelse($payments as $payment)
                             <tr>
-                                <td>{{ \Carbon\Carbon::parse($payment->paid_on)->format('M j, Y') }}</td>
+                                <td>{{ \Carbon\Carbon::parse($payment->paid_on)->format('d M Y') }}</td>
                                 <td>
                                     @if($payment->charge->patient)
                                         <a href="{{ route('patients.show', [$payment->charge->patient, 'tab' => 'billing']) }}">{{ $payment->charge->patient->full_name }}</a>

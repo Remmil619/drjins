@@ -4,7 +4,7 @@
     @foreach($pendingPrices as $pendingCharge)
         <div class="border rounded p-3 mb-3">
             <strong>{{ $pendingCharge->description }}</strong>
-            <p class="small text-muted">{{ $pendingCharge->charged_on }} &middot; Needs price</p>
+            <p class="small text-muted">{{ \Carbon\Carbon::parse($pendingCharge->charged_on)->format('d M Y') }} &middot; Needs price</p>
             <form method="POST" action="{{ route('charges.price', [$patient, $pendingCharge]) }}" class="d-flex align-items-end gap-2 flex-wrap">
                 @csrf @method('PATCH')
                 <div><label for="fee-{{ $pendingCharge->id }}" class="form-label">Fee (PHP)</label>

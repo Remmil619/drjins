@@ -27,25 +27,26 @@
                     </a>
                 </div>
 
-                <form
+                <form data-auto-filter
                     action="{{ route('patients.index') }}"
                     method="GET"
-                    class="mb-3"
+                    class="auto-filter-bar mb-3"
                 >
                     <div class="input-group">
                         <input
                             type="text"
                             name="search"
+                            aria-label="Search patients"
                             class="form-control"
                             placeholder="Search by patient no., name, guardian, or contact number"
                             value="{{ $search }}"
                         >
-                        <button class="btn btn-primary" type="submit">Search</button>
+                        
                         <a href="{{ route('patients.index') }}" class="btn btn-outline-secondary">Reset</a>
                     </div>
                 </form>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle patient-list-table">
                         <thead>
                             <tr>
                                 <th>Patient No.</th>
@@ -55,7 +56,7 @@
                                 <th>Guardian</th>
                                 <th>Contact</th>
                                 <th>Status</th>
-                                <th width="120">Action</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>

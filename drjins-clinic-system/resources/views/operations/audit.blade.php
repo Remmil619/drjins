@@ -14,7 +14,7 @@
                 <p class="small text-muted">Clinical values, passwords, and API secrets are not duplicated in this log.
                     Entries cover activity since this feature was installed.</p>
 
-                <form method="GET" class="d-flex gap-2 mb-4">
+                <form data-auto-filter method="GET" class="auto-filter-bar d-flex gap-2 mb-4">
                     <label for="audit-type" class="visually-hidden">Record
                         type</label>
                     <select
@@ -27,7 +27,7 @@
                             <option @selected(request('type') === $type)>{{ $type }}</option>
                         @endforeach
                     </select>
-                    <button class="btn btn-primary">Filter</button>
+                    
                 </form>
                 <div class="table-responsive">
                     <table class="table">
@@ -43,7 +43,7 @@
                         <tbody>
                             @forelse($logs as $log)
                                 <tr>
-                                    <td>{{ $log->created_at->format('M j, Y g:i:s A') }}</td>
+                                    <td>{{ $log->created_at->format('d M Y g:i:s A') }}</td>
                                     <td>{{ $log->user?->name ?? 'System sync' }}</td>
                                     <td>{{ $log->action }}</td>
                                     <td>{{ $log->record_type }} #{{ $log->record_id }}</td>

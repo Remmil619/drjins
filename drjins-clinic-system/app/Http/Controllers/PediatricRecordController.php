@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Consultation;
 use App\Models\GrowthRecord;
 use App\Models\Immunization;
+use App\Models\ClinicVaccine;
+use Carbon\Carbon;
 use App\Models\MedicalAlert;
 use App\Models\Patient;
 use Illuminate\Http\Request;
@@ -24,6 +26,13 @@ class PediatricRecordController extends Controller
             'temperature_c' => 'nullable|numeric|between:25,45',
             'notes' => 'nullable|string|max:2000',
         ]);
+        $schedule = ClinicVaccine::whereRaw('LOWER(name) = ?', [mb_strtolower($data['vaccine'])])->first();
+        $doseNumber = (int) preg_replace('/\D+/', '', $data['dose']);
+        if ($schedule && $schedule->dose_count <= 1) {
+            $data['next_due_on'] = null;
+        } elseif ($schedule && $schedule->dose_interval_months && $doseNumber > 0 && $doseNumber < $schedule->dose_count) {
+            $data['next_due_on'] = Carbon::parse($data['administered_on'])->addMonths($schedule->dose_interval_months)->toDateString();
+        }
         DB::transaction(function () use ($record, $patient, $data) {
             $record = GrowthRecord::whereKey($record->id)->lockForUpdate()->firstOrFail();
             abort_if($record->voided_at, 409);

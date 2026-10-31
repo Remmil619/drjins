@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\UserRegistrationController;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\ClinicAvailabilityFeedController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ClinicInquiryController;
@@ -17,6 +20,8 @@ use App\Http\Controllers\QueueController;
 use App\Http\Middleware\PreventBackHistory;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/api/clinic/unavailable-dates', ClinicAvailabilityFeedController::class)->name('api.clinic.unavailable-dates');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])
         ->name('login');
@@ -27,8 +32,23 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', PreventBackHistory::class])->group(function () {
+    Route::get('/settings/theme', [SettingsController::class, 'index'])->name('settings.index');
+    Route::get('/settings/availability', [SettingsController::class, 'availability'])->name('settings.availability');
+    Route::post('/settings/availability', [SettingsController::class, 'storeUnavailableDate'])->name('settings.availability.store');
+    Route::delete('/settings/availability/{unavailableDate}', [SettingsController::class, 'destroyUnavailableDate'])->name('settings.availability.destroy');
+    Route::patch('/settings/theme', [SettingsController::class, 'updateTheme'])->middleware('can:register-users')->name('settings.theme');
+    Route::get('/account/password', [AccountController::class, 'editPassword'])->name('password.edit');
+    Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('password.update');
+    Route::get('/consultations', [ConsultationController::class, 'index'])->name('consultations.index');
+    Route::get('/management/vaccines', [ClinicVaccineController::class, 'index'])->name('vaccines.index');
+    Route::post('/management/vaccines', [ClinicVaccineController::class, 'storeGlobal'])->name('vaccines.store');
+    Route::patch('/management/vaccines/{vaccine}', [ClinicVaccineController::class, 'updateGlobal'])->name('vaccines.update');
     Route::get('/users/register', [UserRegistrationController::class, 'create'])
         ->middleware('can:register-users')->name('users.create');
+    Route::post('/users/{user}/details', [UserRegistrationController::class, 'details'])
+        ->middleware('can:register-users')->name('users.details');
+    Route::patch('/users/{user}/password', [UserRegistrationController::class, 'updatePassword'])->middleware('can:register-users')->name('users.password');
+    Route::delete('/users/{user}', [UserRegistrationController::class, 'destroy'])->middleware('can:register-users')->name('users.destroy');
     Route::post('/users/register', [UserRegistrationController::class, 'store'])
         ->middleware('can:register-users')->name('users.store');
     Route::get('/', function () {
@@ -128,3 +148,9 @@ Route::middleware(['auth', PreventBackHistory::class])->group(function () {
 Route::post('/patients/{patient}/checkout', [BillingController::class, 'checkout'])->middleware(['auth', PreventBackHistory::class])->name('billing.checkout');
 Route::get('/inquiries', [ClinicInquiryController::class, 'index'])->middleware(['auth', PreventBackHistory::class])->name('inquiries.index');
 Route::post('/inquiries/{reference}/reply', [ClinicInquiryController::class, 'reply'])->middleware(['auth', PreventBackHistory::class])->name('inquiries.reply');
+
+Route::middleware(['auth', PreventBackHistory::class])->group(function () {
+    Route::post('/patients/{patient}/consultation-workflow', [\App\Http\Controllers\ConsultationWorkflowController::class, 'savePatient'])->name('consultation-workflow.store');
+    Route::get('/queue/{entry}/consultation', [\App\Http\Controllers\ConsultationWorkflowController::class, 'booking'])->name('consultation-workflow.booking');
+    Route::post('/queue/{entry}/consultation', [\App\Http\Controllers\ConsultationWorkflowController::class, 'saveBooking'])->name('consultation-workflow.booking.store');
+});

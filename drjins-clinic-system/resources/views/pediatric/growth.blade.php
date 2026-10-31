@@ -17,7 +17,7 @@
                 <tbody>
                     @forelse($records as $record)
                         <tr class="{{ $record->voided_at ? 'record-void' : '' }}">
-                            <td>{{ $record->measured_on }}</td>
+                            <td>{{ \Carbon\Carbon::parse($record->measured_on)->format('d M Y') }}</td>
                             <td>{{ $record->weight_kg }} kg</td>
                             <td>{{ $record->height_cm }} cm</td>
                             <td>{{ $record->head_cm ? $record->head_cm . ' cm' : '�' }}</td>

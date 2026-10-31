@@ -7,12 +7,6 @@
         'prescription' => 'Prescription notes',
         'follow_up_date' => 'Follow-up date',
     ];
-
-    $consultationFields = [
-        'complaint' => 'Reason for visit',
-        'assessment' => 'Assessment',
-        'prescription' => 'Prescription notes',
-    ];
 @endphp
 
 <div class="card clinic-card">
@@ -26,7 +20,7 @@
             </span>
             <span class="badge text-bg-light">View history</span>
         </button>
-        <div id="panel-history" class="modal" data-patient-panel data-section="history" data-page-key="consultations_page" data-auto-open="{{ request()->has('consultations_page') ? 'true' : 'false' }}" tabindex="-1" aria-labelledby="history-title" aria-hidden="true">
+        <div id="panel-history" class="modal" data-patient-panel data-section="history" data-page-key="consultations_page" data-auto-open="{{ (request()->hasAny(['consultations_page', 'growth_page']) || old('measurement_id')) ? 'true' : 'false' }}" tabindex="-1" aria-labelledby="history-title" aria-hidden="true">
             <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -43,7 +37,7 @@
                             <article class="consultation-history-card {{ $visit->voided_at ? 'is-voided' : '' }}">
                                 <header class="consultation-history-header">
                                     <div>
-                                        <h3 class="h6 mb-1">{{ \Carbon\Carbon::parse($visit->visit_date)->format('F j, Y') }}</h3>
+                                        <h3 class="h6 mb-1">{{ \Carbon\Carbon::parse($visit->visit_date)->format('d M Y') }}</h3>
                                         <p class="small text-muted mb-0">Recorded by {{ $visit->author?->name ?? 'Clinic staff' }}</p>
                                     </div>
                                     <span class="badge {{ $visit->voided_at ? 'text-bg-secondary' : 'text-bg-light' }}">{{ $visit->voided_at ? 'Voided' : 'Consultation' }}</span>
@@ -81,80 +75,23 @@
                         @endforelse
 
                         {{ $records->links() }}
+                        <details class="card clinic-card p-3 mt-3" @if(request()->has('growth_page') || old('measurement_id')) open @endif>
+                            <summary class="fw-semibold">Measurement history</summary>
+                            <div class="table-responsive mt-3"><table class="table"><thead><tr><th>Date</th><th>Height</th><th>Weight</th><th>Temperature</th></tr></thead><tbody>
+                            @forelse($growthRecords as $measurement)
+                                <tr class="{{ $measurement->voided_at ? 'record-void' : '' }}"><td>{{ \Carbon\Carbon::parse($measurement->measured_on)->format('d M Y') }}</td><td>{{ $measurement->height_cm }} cm</td><td>{{ $measurement->weight_kg }} kg</td><td>{{ $measurement->temperature_c ?? 'Not recorded' }}</td></tr>
+                                <tr><td colspan="4">@include('pediatric.edit-measurement')</td></tr>
+                            @empty
+                                <tr><td colspan="4">No measurements recorded.</td></tr>
+                            @endforelse
+                            </tbody></table></div>
+                            {{ $growthRecords->links() }}
+                        </details>
+
                     </div>
                     <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Close</button></div>
                 </div>
             </div>
-        </div>
-        <button type="button" class="btn w-100 text-start p-3 mt-3 border rounded d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#panel-consultations" aria-haspopup="dialog" aria-controls="panel-consultations">
-            <span><strong class="d-block">Consultation &amp; vitals</strong><small class="text-muted">Record the check-up and patient measurements</small></span>
-            <span class="badge text-bg-light">Open form</span>
-        </button>
-        <div id="panel-consultations" class="modal" data-patient-panel data-section="consultations" data-auto-open="{{ $errors->any() && !old('measurement_id') ? 'true' : 'false' }}" tabindex="-1" aria-labelledby="consultation-form-title" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">
-                <div class="modal-header"><div><h2 id="consultation-form-title" class="modal-title h5">Consultation &amp; vitals</h2><p class="small text-muted mb-0">{{ $patient->full_name }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body">
-            <form
-                method="POST"
-                action="{{ route('consultations.store', $patient) }}"
-                class="mt-3"
-            >
-                @csrf
-                <input
-                    type="hidden"
-                    name="request_key"
-                    value="{{ old('request_key', (string) \Illuminate\Support\Str::uuid()) }}"
-                >
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="visit_date" class="form-label">Visit date</label>
-                        <input
-                            id="visit_date"
-                            name="visit_date"
-                            type="date"
-                            class="form-control"
-                            required
-                            min="{{ $patient->birthdate }}"
-                            max="{{ today()->toDateString() }}"
-                            value="{{ old('visit_date', today()->toDateString()) }}"
-                        >
-                    </div>
-                    <div class="col-md-6">
-                        <label for="follow_up_date" class="form-label">Follow-up date
-                            (optional)</label>
-                        <input
-                            id="follow_up_date"
-                            name="follow_up_date"
-                            type="date"
-                            class="form-control"
-                            value="{{ old('follow_up_date') }}"
-                        >
-                    </div>
-                    <div class="col-12"><h3 class="h6 mb-0">Growth &amp; vitals</h3><small class="text-muted">Measurements are saved with the visit and excluded from the consultation printout.</small></div>
-                    @foreach(['height_cm' => ['Height (cm)', 300], 'weight_kg' => ['Weight (kg)', 500], 'temperature_c' => ['Temperature (°C)', 45]] as $key => [$label, $max])
-                        <div class="col-md-4">
-                            <label for="consultation-{{ $key }}" class="form-label">{{ $label }}</label>
-                            <input id="consultation-{{ $key }}" name="{{ $key }}" type="number" class="form-control" step="0.01" min="{{ $key === 'temperature_c' ? 25 : 0.01 }}" max="{{ $max }}"
-                                value="{{ old($key, $latestVitals?->measured_on === old('visit_date', today()->toDateString()) ? $latestVitals->$key : null) }}">
-                        </div>
-                    @endforeach
-                    @foreach ($consultationFields as $field => $label)
-                        <div class="col-12">
-                            <label for="{{ $field }}" class="form-label">{{ $label }}</label>
-                            <textarea
-                                id="{{ $field }}"
-                                name="{{ $field }}"
-                                class="form-control"
-                                rows="3"
-                                maxlength="5000"
-                                @required(in_array($field, ['complaint', 'assessment']))
-                            >{{ old($field) }}</textarea>
-                        </div>
-                    @endforeach
-                </div>
-                <button type="submit" class="btn btn-primary mt-3">Save consultation &amp; vitals</button>
-            </form>
-                </div><div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Close</button></div></div></div>
         </div>
     </div>
 </div>

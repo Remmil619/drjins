@@ -6,7 +6,7 @@
         <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div>
                 <h1>Dashboard</h1>
-                <p class="mb-0">{{ now()->format('l, F j, Y') }}</p>
+                <p class="mb-0">{{ now()->format('l, d M Y') }}</p>
             </div>
             <a class="btn btn-primary" href="{{ route('patients.create') }}">Register patient</a>
         </div>

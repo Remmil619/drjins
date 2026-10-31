@@ -30,6 +30,7 @@
                         @method('PUT')
                     @endif
 
+                    <p class="small text-muted mb-3"><span class="text-danger fw-bold" aria-hidden="true">*</span> Required fields</p>
                     <h5 class="fw-bold mb-3">Patient Information</h5>
                     <div class="mb-3">
                         <label for="patient-suffix" class="form-label">Suffix (optional)</label>
@@ -44,7 +45,7 @@
                     </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">First Name</label>
+                            <label class="form-label">First Name <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
                             <input
                                 type="text"
                                 name="first_name"
@@ -63,7 +64,7 @@
                             >
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Last Name</label>
+                            <label class="form-label">Last Name <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
                             <input
                                 type="text"
                                 name="last_name"
@@ -75,17 +76,17 @@
                     </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Birthdate</label>
+                            <label class="form-label">Birthdate <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
                             @php
                                 $birthdateValue = old('birthdate', $patient->birthdate ?? '');
                                 $birthdateIsValid = preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdateValue)
                                     && checkdate((int) substr($birthdateValue, 5, 2), (int) substr($birthdateValue, 8, 2), (int) substr($birthdateValue, 0, 4));
                                 $birthdateDisplayValue = $birthdateIsValid
-                                    ? \Carbon\Carbon::createFromFormat('!Y-m-d', $birthdateValue)->format('m/d/y')
+                                    ? \Carbon\Carbon::createFromFormat('!Y-m-d', $birthdateValue)->format('d/m/Y')
                                     : (old('birthdate') !== null ? old('birthdate') : '');
                             @endphp
                             <input
-                                type="text" placeholder="MM/DD/YY" inputmode="numeric" maxlength="8" pattern="[0-9]{2}/[0-9]{2}/[0-9]{2}"
+                                type="text" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" pattern="[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}"
                                 name="birthdate"
                                 class="form-control"
                                 value="{{ $birthdateDisplayValue }}"
@@ -93,7 +94,7 @@
                             >
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Sex</label>
+                            <label class="form-label">Sex <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
                             <select
                                 name="sex"
                                 class="form-select"
@@ -156,7 +157,7 @@
                     </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Status</label>
+                            <label class="form-label">Status <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
                             <select
                                 name="status"
                                 class="form-select"
@@ -183,12 +184,12 @@
                     <div class="row">
                         @foreach(['guardian_first_name' => 'First Name', 'guardian_middle_name' => 'Middle Name (optional)', 'guardian_surname' => 'Last Name'] as $field => $label)
                             <div class="col-md-4 mb-3">
-                                <label for="{{ $field }}" class="form-label">{{ $label }}</label>
+                                <label for="{{ $field }}" class="form-label">{{ $label }}@if($field !== 'guardian_middle_name') <span class="text-danger fw-bold" aria-hidden="true">*</span>@endif</label>
                                 <input id="{{ $field }}" name="{{ $field }}" class="form-control" maxlength="80" value="{{ old($field, $patient->$field ?? '') }}" @required($field !== 'guardian_middle_name')>
                             </div>
                         @endforeach
                         <div class="col-md-6 mb-3">
-                            <label for="guardian_relationship" class="form-label">Relationship to Patient</label>
+                            <label for="guardian_relationship" class="form-label">Relationship to Patient <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
                             <select id="guardian_relationship" name="guardian_relationship" class="form-select" required>
                                 <option value="">Choose one</option>
                                 @php($relationships = ['Mother', 'Father', 'Legal guardian', 'Other relative', 'Other'])
@@ -202,7 +203,7 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="contact_number" class="form-label">Contact Number</label>
+                            <label for="contact_number" class="form-label">Contact Number <span class="text-danger fw-bold" aria-hidden="true">*</span></label>
                             <input id="contact_number" name="contact_number" type="tel" class="form-control" maxlength="20" value="{{ old('contact_number', $patient->contact_number ?? '') }}" required>
                         </div>
                     </div>

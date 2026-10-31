@@ -15,17 +15,17 @@
     <main class="document">
         <header class="document-header">
             <div><p class="eyebrow">PATIENT CARE</p><h1>Dr. Jn's Clinic</h1><p class="document-type">{{ $documentTitle }}</p></div>
-            <div class="visit-date"><span>Date of visit</span><strong>{{ \Carbon\Carbon::parse($consultation->visit_date)->format('F j, Y') }}</strong></div>
+            <div class="visit-date"><span>Date of visit</span><strong>{{ \Carbon\Carbon::parse($consultation->visit_date)->format('d M Y') }}</strong></div>
         </header>
         <dl class="patient-details">
-            @foreach(['Patient' => $patient->full_name, 'Patient number' => $patient->patient_no, 'Birthdate' => \Carbon\Carbon::parse($patient->birthdate)->format('F j, Y'), 'Sex' => $patient->sex, 'Guardian' => $patient->guardian_name, 'Address' => ($patient->address ?: 'Not recorded')] as $label => $value)
+            @foreach(['Patient' => $patient->full_name, 'Patient number' => $patient->patient_no, 'Birthdate' => \Carbon\Carbon::parse($patient->birthdate)->format('d M Y'), 'Sex' => $patient->sex, 'Guardian' => $patient->guardian_name, 'Address' => ($patient->address ?: 'Not recorded')] as $label => $value)
                 <div><dt>{{ $label }}</dt><dd>{{ $value }}</dd></div>
             @endforeach
         </dl>
         @if($printConsultation ?? false)
             @foreach(['complaint' => 'Reason for visit', 'assessment' => 'Assessment', 'plan' => 'Care plan', 'prescription' => 'Prescription notes', 'follow_up_date' => 'Follow-up date'] as $field => $label)
                 @if(filled($consultation->$field))
-                    <section class="note-section"><h2>{{ $label }}</h2><div class="note-text">{{ $field === 'follow_up_date' ? \Carbon\Carbon::parse($consultation->$field)->format('F j, Y') : $consultation->$field }}</div></section>
+                    <section class="note-section"><h2>{{ $label }}</h2><div class="note-text">{{ $field === 'follow_up_date' ? \Carbon\Carbon::parse($consultation->$field)->format('d M Y') : $consultation->$field }}</div></section>
                 @endif
             @endforeach
         @else

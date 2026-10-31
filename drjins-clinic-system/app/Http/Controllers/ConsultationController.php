@@ -14,6 +14,35 @@ use Illuminate\Validation\ValidationException;
 
 class ConsultationController extends Controller
 {
+    public function index(Request $request)
+    {
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:100',
+            'patient' => 'nullable|integer|exists:patients,id',
+        ]);
+        $selectedPatient = !empty($filters['patient']) ? Patient::findOrFail($filters['patient']) : null;
+        $search = $filters['search'] ?? '';
+        $records = Consultation::with(['patient', 'author'])
+            ->when($selectedPatient, fn ($query) => $query->where('patient_id', $selectedPatient->id))
+            ->when($search, function ($query) use ($search) {
+                $query->whereHas('patient', function ($patient) use ($search) {
+                    $patient->where(function ($match) use ($search) {
+                        $match->where('patient_no', 'like', '%'.$search.'%')
+                            ->orWhere(function ($name) use ($search) {
+                                foreach (preg_split('/\s+/', trim($search)) as $word) {
+                                    $name->where(fn ($part) => $part->where('first_name', 'like', '%'.$word.'%')
+                                        ->orWhere('middle_name', 'like', '%'.$word.'%')
+                                        ->orWhere('last_name', 'like', '%'.$word.'%')
+                                        ->orWhere('suffix', 'like', '%'.$word.'%'));
+                                }
+                            });
+                    });
+                });
+            })
+            ->orderByDesc('visit_date')->orderByDesc('id')->paginate(15)->appends(array_filter(['search' => $search, 'patient' => $selectedPatient?->id]));
+        return view('consultations.index', compact('records', 'search', 'selectedPatient'));
+    }
+
     public function print(Patient $patient, Consultation $consultation)
     {
         abort_unless($consultation->patient_id === $patient->id && ! $consultation->voided_at, 404);

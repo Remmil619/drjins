@@ -1,4 +1,4 @@
-<nav class="navbar navbar-expand-xl clinic-navbar" aria-label="Main navigation">
+<nav class="navbar navbar-expand-lg clinic-navbar workspace-sidebar" aria-label="Main navigation">
     <div class="container">
         <a class="navbar-brand clinic-brand" href="{{ route('dashboard') }}">
             <span class="brand-symbol" aria-hidden="true">+</span>
@@ -18,7 +18,8 @@
             </span>
         </button>
         <div class="collapse navbar-collapse" id="navbarMenu">
-            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+            <ul class="navbar-nav workspace-navigation">
+                <li class="navigation-heading">Overview</li>
                 <li class="nav-item">
                     <a href="{{ route('dashboard') }}"
                         class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
@@ -26,6 +27,7 @@
                         Clinic Dashboard
                     </a>
                 </li>
+                <li class="navigation-heading">Patient care</li>
                 <li class="nav-item">
                     <a href="{{ route('appointments.index') }}"
                         class="nav-link {{ request()->routeIs('appointments.*') ? 'active' : '' }}"
@@ -34,35 +36,53 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('patients.index') }}"
-                        class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}"
-                    >
-                        Patients
-                    </a>
+                    <a href="{{ route('consultations.index') }}" class="nav-link {{ request()->routeIs('consultations.*') ? 'active' : '' }}">Consultation</a>
                 </li>
+                @php($managementOpen = request()->routeIs('patients.*', 'queue.*', 'vaccines.*', 'clinic-vaccines.*', 'billing.*', 'charges.*', 'payments.*'))
                 <li class="nav-item">
-                    <a href="{{ route('queue.index') }}"
-                        class="nav-link {{ request()->routeIs('queue.*') ? 'active' : '' }}"
-                    >Queue</a>
+                    <button type="button" class="nav-link management-toggle w-100 {{ $managementOpen ? 'active' : '' }}"
+                        data-bs-toggle="collapse" data-bs-target="#managementMenu"
+                        aria-expanded="{{ $managementOpen ? 'true' : 'false' }}" aria-controls="managementMenu">
+                        <span>Management</span><span class="management-chevron" aria-hidden="true">&#8964;</span>
+                    </button>
+                    <ul id="managementMenu" class="collapse management-links list-unstyled {{ $managementOpen ? 'show' : '' }}">
+                        @foreach([
+                            ['patients.index', 'patients.*', 'Patients'],
+                            ['queue.index', 'queue.*', 'Queue'],
+                            ['vaccines.index', 'vaccines.*', 'Vaccines'],
+                            ['billing.index', 'billing.*', 'Fees'],
+                        ] as [$destination, $pattern, $label])
+                            <li><a class="nav-link {{ request()->routeIs($pattern) ? 'active' : '' }}" href="{{ route($destination) }}" @if(request()->routeIs($pattern)) aria-current="page" @endif>{{ $label }}</a></li>
+                        @endforeach
+                    </ul>
                 </li>
                 <li class="nav-item">
                     <a href="{{ route('inquiries.index') }}"
                         class="nav-link {{ request()->routeIs('inquiries.*') ? 'active' : '' }}"
                     >Inquiries</a>
                 </li>
+                <li class="navigation-heading">Administration</li>
                 <li class="nav-item">
                     <a href="{{ route('sales.index') }}"
                         class="nav-link {{ request()->routeIs('sales.*') ? 'active' : '' }}"
                     >Sales</a>
                 </li>
-                @can('register-users')
-                    <li class="nav-item">
-                        <a href="{{ route('users.create') }}"
-                            class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
-                        >Register User</a>
-                    </li>
-                @endcan
-                <li class="nav-item dropdown ms-lg-2">
+                <li class="nav-item">
+                    <a href="{{ route('reports.index') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">Reports</a>
+                </li>
+                @php($settingsOpen = request()->routeIs('settings.*', 'users.*'))
+                <li class="nav-item">
+                    <button type="button" class="nav-link management-toggle w-100 {{ $settingsOpen ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#settingsMenu" aria-expanded="{{ $settingsOpen ? 'true' : 'false' }}" aria-controls="settingsMenu">
+                        <span>Settings</span><span class="management-chevron" aria-hidden="true">&#8964;</span>
+                    </button>
+                    <ul id="settingsMenu" class="collapse management-links list-unstyled {{ $settingsOpen ? 'show' : '' }}">
+                        @can('register-users')<li><a href="{{ route('users.create') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">Accounts</a></li>@endcan
+                        <li><a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.index') ? 'active' : '' }}">Theme</a></li>
+                        <li><a href="{{ route('settings.availability') }}" class="nav-link {{ request()->routeIs('settings.availability*') ? 'active' : '' }}">Doctors availability</a></li>
+                    </ul>
+                </li>
+            </ul>
+                <div class="dropdown workspace-account">
                     <button
                         class="btn account-menu-button dropdown-toggle"
                         type="button"
@@ -85,6 +105,8 @@
                         </div>
                         <div class="dropdown-divider">
                         </div>
+                        <a class="dropdown-item" href="{{ route('password.edit') }}">Change password</a>
+                        <div class="dropdown-divider"></div>
                         <button
                             type="button"
                             class="logout-button"
@@ -94,8 +116,7 @@
                             Sign out securely
                         </button>
                     </div>
-                </li>
-            </ul>
+                </div>
         </div>
     </div>
 </nav>

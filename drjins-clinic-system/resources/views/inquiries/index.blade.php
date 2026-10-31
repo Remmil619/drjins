@@ -47,7 +47,7 @@
                                 </div>
                             </div>
                             <span class="inquiry-date">
-                                {{ $received ? $received->format('M j, Y · g:i A') : 'Date unavailable' }}
+                                {{ $received ? $received->format('d M Y · g:i A') : 'Date unavailable' }}
                             </span>
                         </div>
 

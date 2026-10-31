@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Book your child's clinic visit in Abuyog, Leyte and track appointments online.">
+<meta name="description" content="Child checkups at Dr. Jn's Children's Clinic in Abuyog, Leyte. Explore clinic services, book an available appointment, and track your visit online.">
 <title>@yield('title', 'Plan your visit') | {{ config('clinic.name') }}</title>
 <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
 <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}" rel="stylesheet">
@@ -16,7 +16,7 @@
 <a class="clinic-brand" href="{{ route('home') }}"><span class="brand-symbol" aria-hidden="true">+</span><span>Dr. Jn's<small>CHILDREN'S CLINIC</small></span></a>
 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle menu"><span class="navbar-toggler-icon"></span></button>
 <div class="collapse navbar-collapse" id="mainNavigation"><ul class="navbar-nav ms-auto align-items-xl-center">
-@foreach(['home' => 'Home', 'booking.status' => 'Track appointment', 'patient-hub' => 'Visit guide', 'contact' => 'Contact'] as $page => $label)
+@foreach(['home' => 'Home', 'services' => 'Services', 'booking.status' => 'Track appointment', 'patient-hub' => 'Visit guide', 'contact' => 'Contact'] as $page => $label)
 <li class="nav-item"><a class="nav-link {{ request()->routeIs($page) ? 'active' : '' }}" @if(request()->routeIs($page)) aria-current="page" @endif href="{{ route($page) }}">{{ $label }}</a></li>
 @endforeach
 </ul><div class="header-actions"><a class="btn btn-primary" href="{{ route('booking.create') }}">Book Now &rarr;</a></div></div>
